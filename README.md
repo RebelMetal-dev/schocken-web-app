@@ -11,6 +11,6 @@ Dieses Projekt dient der Digitalisierung der Spielergebnisse und Deckelverteilun
 * **Bibliotheken:** Lombok, Spring Web, DevTools
 
 ## Features (in Planung)
-* Verwaltung von Spielern und deren Deckelanzahl (0-13)
+* Verwaltung von Spielern und deren Deckelanzahl (2-13)
 * Logik für Sonderwürfe (Schock Aus, General, etc.)
 * Web-Interface für die Nutzung am Smartphone
