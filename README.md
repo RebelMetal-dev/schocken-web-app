@@ -1,12 +1,16 @@
 # Schocken Web App 🎲
-Ein digitales Management-Tool für das Kneipenspiel "Schocken".
+Ein digitales Management-Tool für das traditionsreiche Kneipenspiel "Schocken".
 
 ## Projekt-Details
-* **Entwickler:** RebelMetal-dev [cite: 2026-03-05]
-* **Deadline:** 25.03.2026 [cite: 2026-03-05]
-* **Status:** Initiales Setup abgeschlossen [cite: 2026-03-05]
+Dieses Projekt dient der Digitalisierung der Spielergebnisse und Deckelverteilung beim Schocken. Es ist als Teil meines Java-Portfolios konzipiert.
 
 ## Tech-Stack
-* **Sprache:** Java 21 [cite: 2026-03-05]
-* **Framework:** Spring Boot 3.5.11 [cite: 2026-03-05]
-* **Build-System:** Gradle [cite: 2026-03-05]
+* **Sprache:** Java 21
+* **Framework:** Spring Boot 3.5.11
+* **Build-System:** Gradle (Kotlin DSL)
+* **Bibliotheken:** Lombok, Spring Web, DevTools
+
+## Features (in Planung)
+* Verwaltung von Spielern und deren Deckelanzahl (0-13)
+* Logik für Sonderwürfe (Schock Aus, General, etc.)
+* Web-Interface für die Nutzung am Smartphone
