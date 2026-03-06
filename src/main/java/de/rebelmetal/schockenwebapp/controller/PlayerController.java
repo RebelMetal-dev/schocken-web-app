@@ -1,90 +1,72 @@
 package de.rebelmetal.schockenwebapp.controller;
 
 import de.rebelmetal.schockenwebapp.model.Player;
+import de.rebelmetal.schockenwebapp.repository.PlayerRepository;
+import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
 /**
- * REST-Controller für die Verwaltung der Spielteilnehmer.
- * Ermöglicht den Zugriff auf Spielerdaten und die Steuerung des Spielstatus über HTTP-Requests.
+ * REST-Controller für die Verwaltung der Spieler.
+ * Nutzt das PlayerRepository für die persistente Datenspeicherung in der H2-Datenbank.
  */
 @RestController
 @RequestMapping("/api/players")
+@RequiredArgsConstructor // Erzeugt automatisch den Konstruktor für das Repository (Dependency Injection)
 public class PlayerController {
 
-    /**
-     * Liste zur Verwaltung der Spieler im Arbeitsspeicher (In-Memory).
-     */
-    private final List<Player> players = new ArrayList<>();
+    private final PlayerRepository playerRepository;
 
     /**
-     * Ruft alle aktuell am Spiel teilnehmenden Personen ab.
-     *
-     * @return Eine Liste aller Player-Objekte.
+     * Ruft alle Spieler aus der Datenbank ab.
      */
     @GetMapping
     public List<Player> getAllPlayers() {
-        return players;
+        return playerRepository.findAll();
     }
 
     /**
-     * Registriert einen neuen Spieler für die aktuelle Spielrunde.
-     *
-     * @param name Der Name des Spielers aus dem Request-Body.
-     * @return Das neu erstellte Spieler-Objekt mit generierter ID.
+     * Speichert einen neuen Spieler in der Datenbank.
      */
     @PostMapping
     public Player addPlayer(@RequestBody String name) {
         Player newPlayer = new Player(UUID.randomUUID(), name, 0, false);
-        players.add(newPlayer);
-        return newPlayer;
+        return playerRepository.save(newPlayer);
     }
 
     /**
-     * Entfernt einen Spieler permanent aus der Liste.
-     *
-     * @param id Die UUID des zu löschenden Spielers.
-     * @return Die Liste der verbleibenden Spieler nach dem Löschvorgang.
+     * Löscht einen Spieler anhand seiner ID aus der Datenbank.
      */
     @DeleteMapping("/{id}")
-    public List<Player> deletePlayer(@PathVariable UUID id) {
-        players.removeIf(p -> p.getId().equals(id));
-        return players;
+    public void deletePlayer(@PathVariable UUID id) {
+        playerRepository.deleteById(id);
     }
 
     /**
-     * Ändert die Deckelanzahl eines Spielers basierend auf seiner ID.
-     *
-     * @param id         Die eindeutige ID des Spielers.
-     * @param neueAnzahl Die neue Gesamtzahl der Strafpunkte.
-     * @return Das aktualisierte Player-Objekt oder null, falls nicht gefunden.
+     * Aktualisiert die Deckelanzahl eines Spielers direkt in der Datenbank.
      */
     @PutMapping("/{id}/deckel")
     public Player updateDeckel(@PathVariable UUID id, @RequestBody int neueAnzahl) {
-        return players.stream()
-                .filter(p -> p.getId().equals(id))
-                .findFirst()
+        return playerRepository.findById(id)
                 .map(p -> {
                     p.setDeckel(neueAnzahl);
-                    return p;
+                    return playerRepository.save(p);
                 })
                 .orElse(null);
     }
 
     /**
-     * Setzt alle Spieler auf den Initialzustand (0 Deckel, nicht sicher) zurück.
-     *
-     * @return Die aktualisierte Liste aller Spieler nach dem Reset.
+     * Setzt alle Spieler in der Datenbank zurück.
      */
     @PostMapping("/reset")
     public List<Player> resetGame() {
-        players.forEach(p -> {
+        List<Player> allPlayers = playerRepository.findAll();
+        allPlayers.forEach(p -> {
             p.setDeckel(0);
             p.setIstSicher(false);
         });
-        return players;
+        return playerRepository.saveAll(allPlayers);
     }
 }
