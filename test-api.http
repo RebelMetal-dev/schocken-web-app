@@ -1,0 +1,21 @@
+### Einen neuen Spieler hinzufügen
+POST http://localhost:8080/api/players
+Content-Type: text/plain
+
+Christoph
+
+### Variable für die ID festlegen (Kopiere eine ID aus deinem Browser hier hinein)
+@playerId = 56ead006-3af4-475f-a89f-db036bf02101
+
+### Einen Spieler löschen
+DELETE http://localhost:8080/api/players/{{playerId}}
+
+### Deckel eines Spielers erhöhen
+
+PUT http://localhost:8080/api/players/{{playerId}}/deckel
+Content-Type: application/json
+
+7
+
+### Alle Spieler zurücksetzen
+POST http://localhost:8080/api/players/reset
