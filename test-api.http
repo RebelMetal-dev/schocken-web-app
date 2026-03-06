@@ -20,4 +20,6 @@ Content-Type: application/json
 ### Alle Spieler zurücksetzen
 POST http://localhost:8080/api/players/reset
 
+### Alle Spieler anzeigen
+GET http://localhost:8080/api/players
 

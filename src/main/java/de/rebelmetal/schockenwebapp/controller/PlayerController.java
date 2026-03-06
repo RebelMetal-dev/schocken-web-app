@@ -1,7 +1,7 @@
 package de.rebelmetal.schockenwebapp.controller;
 
 import de.rebelmetal.schockenwebapp.model.Player;
-import de.rebelmetal.schockenwebapp.repository.PlayerRepository;
+import de.rebelmetal.schockenwebapp.service.PlayerService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
@@ -9,64 +9,33 @@ import java.util.List;
 import java.util.UUID;
 
 /**
- * REST-Controller für die Verwaltung der Spieler.
- * Nutzt das PlayerRepository für die persistente Datenspeicherung in der H2-Datenbank.
+ * REST-Controller für die Spieler-API.
+ * Delegiert alle fachlichen Aufgaben an den PlayerService.
  */
 @RestController
 @RequestMapping("/api/players")
-@RequiredArgsConstructor // Erzeugt automatisch den Konstruktor für das Repository (Dependency Injection)
+@RequiredArgsConstructor
 public class PlayerController {
 
-    private final PlayerRepository playerRepository;
+    private final PlayerService playerService;
 
-    /**
-     * Ruft alle Spieler aus der Datenbank ab.
-     */
     @GetMapping
     public List<Player> getAllPlayers() {
-        return playerRepository.findAll();
+        return playerService.getAllPlayers();
     }
 
-    /**
-     * Speichert einen neuen Spieler in der Datenbank.
-     */
     @PostMapping
     public Player addPlayer(@RequestBody String name) {
-        Player newPlayer = new Player(UUID.randomUUID(), name, 0, false);
-        return playerRepository.save(newPlayer);
+        return playerService.createPlayer(name);
     }
 
-    /**
-     * Löscht einen Spieler anhand seiner ID aus der Datenbank.
-     */
     @DeleteMapping("/{id}")
     public void deletePlayer(@PathVariable UUID id) {
-        playerRepository.deleteById(id);
+        playerService.deletePlayer(id);
     }
 
-    /**
-     * Aktualisiert die Deckelanzahl eines Spielers direkt in der Datenbank.
-     */
     @PutMapping("/{id}/deckel")
-    public Player updateDeckel(@PathVariable UUID id, @RequestBody int neueAnzahl) {
-        return playerRepository.findById(id)
-                .map(p -> {
-                    p.setDeckel(neueAnzahl);
-                    return playerRepository.save(p);
-                })
-                .orElse(null);
-    }
-
-    /**
-     * Setzt alle Spieler in der Datenbank zurück.
-     */
-    @PostMapping("/reset")
-    public List<Player> resetGame() {
-        List<Player> allPlayers = playerRepository.findAll();
-        allPlayers.forEach(p -> {
-            p.setDeckel(0);
-            p.setIstSicher(false);
-        });
-        return playerRepository.saveAll(allPlayers);
+    public Player updateDeckel(@PathVariable UUID id, @RequestBody int anzahl) {
+        return playerService.addDeckel(id, anzahl);
     }
 }
