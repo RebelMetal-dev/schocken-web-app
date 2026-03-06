@@ -12,6 +12,8 @@ public class DiceRoll implements Comparable<DiceRoll> {
     public DiceRoll(int d1, int d2, int d3) {
         this.dice = new int[]{d1, d2, d3};
         Arrays.sort(this.dice); // Sorgt für 1-2-5 statt 5-1-2
+        //Röntgen
+        System.out.println("Sortierte Wuerfel: " + Arrays.toString(this.dice));
     }
 
     public String getType() {
@@ -38,9 +40,8 @@ public class DiceRoll implements Comparable<DiceRoll> {
     public int compareTo(DiceRoll other) {
         // 1. Erst den Rang vergleichen (Idee B!)
         int rankCompare = Integer.compare(this.getRank(), other.getRank());
-        if (rankCompare != 0) {
-            return rankCompare;
-        }
+        if (rankCompare != 0) return rankCompare;
+
 
         // 2. Wenn der Rang gleich ist: Detailprüfung per Hausnummer-Formel
         // Wir rechnen die Würfel in eine 3-stellige Zahl um (z.B. 5, 4, 2 -> 542)
