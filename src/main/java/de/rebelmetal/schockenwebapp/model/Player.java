@@ -2,6 +2,7 @@ package de.rebelmetal.schockenwebapp.model;
 
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
+import jakarta.persistence.Transient;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -21,18 +22,30 @@ import java.util.UUID;
 @Entity
 public class Player {
 
-    /** * Eindeutige Identifikationsnummer des Spielers.
+    /**
+     * Eindeutige Identifikationsnummer des Spielers.
      * Dient als Primärschlüssel (@Id) in der Datenbank.
      */
     @Id
     private UUID id;
 
-    /** Der gewählte Anzeigename des Spielers. */
+    /**
+     * Der gewählte Anzeigename des Spielers.
+     */
     private String name;
 
-    /** Aktuelle Anzahl der Strafpunkte (Deckel) des Spielers. */
+    /**
+     * Aktuelle Anzahl der Strafpunkte (Deckel) des Spielers.
+     */
     private int deckel;
 
-    /** Status, ob der Spieler in der aktuellen Runde sicher ist. */
+    /**
+     * Status, ob der Spieler in der aktuellen Runde sicher ist.
+     */
     private boolean istSicher;
+
+    // NEU: Hier speichern wir das Ergebnis des letzten Wurfs
+    @Transient
+    private DiceRoll letzterWurf;
 }
+

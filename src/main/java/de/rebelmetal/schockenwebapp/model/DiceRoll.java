@@ -2,6 +2,7 @@ package de.rebelmetal.schockenwebapp.model;
 
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
+
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.stream.IntStream;
@@ -45,9 +46,9 @@ public class DiceRoll implements Comparable<DiceRoll> {
         return switch (getType()) {
             case "SCHOCK_AUS" -> 5;
             case String s when s.startsWith("SCHOCK_") -> 4;
-            case "GENERAL"    -> 3;
-            case "STRASSE"    -> 2;
-            default           -> 1;
+            case "GENERAL" -> 3;
+            case "STRASSE" -> 2;
+            default -> 1;
         };
     }
 
@@ -63,7 +64,6 @@ public class DiceRoll implements Comparable<DiceRoll> {
 
         return Integer.compare(myValue, otherValue);
     }
-
 
 
 }

@@ -1,5 +1,6 @@
 package de.rebelmetal.schockenwebapp.controller;
 
+import de.rebelmetal.schockenwebapp.model.DiceRoll;
 import de.rebelmetal.schockenwebapp.model.Player;
 import de.rebelmetal.schockenwebapp.service.PlayerService;
 import lombok.RequiredArgsConstructor;
@@ -25,8 +26,8 @@ public class PlayerController {
     }
 
     @PostMapping
-    public Player addPlayer(@RequestBody String name) {
-        return playerService.createPlayer(name);
+    public Player createPlayer(@RequestBody Player player) {
+        return playerService.createPlayer(player.getName());
     }
 
     @DeleteMapping("/{id}")
@@ -37,5 +38,21 @@ public class PlayerController {
     @PutMapping("/{id}/deckel")
     public Player updateDeckel(@PathVariable UUID id, @RequestBody int anzahl) {
         return playerService.addDeckel(id, anzahl);
+    }
+
+    @PostMapping("/{id}/roll-virtual")
+    public DiceRoll rollVirtual(@PathVariable UUID id) {
+        // Hier rufen wir den Chef-Service auf
+        return playerService.performVirtualRoll(id);
+    }
+
+    @PostMapping("/{id}/roll-manual")
+    public DiceRoll rollManual(
+            @PathVariable UUID id,
+            @RequestParam int d1,
+            @RequestParam int d2,
+            @RequestParam int d3) {
+        // Hier leiten wir die Handeingabe weiter
+        return playerService.performManualRoll(id, d1, d2, d3);
     }
 }
