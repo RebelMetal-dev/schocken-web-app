@@ -15,13 +15,14 @@ Content-Type: application/json
 }
 
 ### 3. Perform virtual roll (Replace UUID after creation!)
-POST http://localhost:8080/api/players/INSERT-UUID-HERE/roll-virtual
+POST http://localhost:8080/api/players/852fd21e-0586-4bd7-b729-33e66c0a636f/roll-virtual
 
 ### 4. Perform manual roll (Replace UUID after creation!)
-POST http://localhost:8080/api/players/INSERT-UUID-HERE/roll-manual?d1=1&d2=1&d3=1
+POST http://localhost:8080/api/players/a39184d6-37bc-495a-8048-741ade099d13/roll-manual?d1=1&d2=1&d3=1
 
 ### 5. Update penalty chips (Using the new DTO/Record approach)
-PUT http://localhost:8080/api/players/INSERT-UUID-HERE/penalty-chips
+PUT http://localhost:8080/api/players/852fd21e-0586-4bd7-b729-33e66c0a636f
+    /penalty-chips
 Content-Type: application/json
 
 {
