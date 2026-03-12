@@ -1,7 +1,10 @@
 package de.rebelmetal.schockenwebapp.model;
 
+import jakarta.persistence.Embeddable;
+import jakarta.persistence.Embedded;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
+import lombok.NoArgsConstructor;
 
 import java.util.Arrays;
 import java.util.Collections;
@@ -9,8 +12,10 @@ import java.util.stream.IntStream;
 
 @Getter
 @EqualsAndHashCode
+@Embeddable
+@NoArgsConstructor
 public class DiceRoll implements Comparable<DiceRoll> {
-    private final int[] dice;
+    private  int[] dice;
 
     public DiceRoll(int d1, int d2, int d3) {
         // 1. Validierung (Defensiv-Modus)

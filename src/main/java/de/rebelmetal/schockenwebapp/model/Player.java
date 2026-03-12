@@ -1,5 +1,6 @@
 package de.rebelmetal.schockenwebapp.model;
 
+import jakarta.persistence.Embedded;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
 import jakarta.persistence.Transient;
@@ -45,7 +46,7 @@ public class Player {
     private boolean istSicher;
 
     // NEU: Hier speichern wir das Ergebnis des letzten Wurfs
-    @Transient
+    @Embedded
     private DiceRoll letzterWurf;
 }
 
