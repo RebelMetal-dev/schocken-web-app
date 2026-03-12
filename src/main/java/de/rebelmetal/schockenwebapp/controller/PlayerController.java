@@ -1,17 +1,19 @@
 package de.rebelmetal.schockenwebapp.controller;
 
+import de.rebelmetal.schockenwebapp.dto.CreatePlayerRequest;
+import de.rebelmetal.schockenwebapp.dto.PenaltyUpdate;
 import de.rebelmetal.schockenwebapp.model.DiceRoll;
 import de.rebelmetal.schockenwebapp.model.Player;
 import de.rebelmetal.schockenwebapp.service.PlayerService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 import java.util.UUID;
 
 /**
- * REST-Controller für die Spieler-API.
- * Delegiert alle fachlichen Aufgaben an den PlayerService.
+ * REST controller for the Player API. Delegates all business logic to the PlayerService.
  */
 @RestController
 @RequestMapping("/api/players")
@@ -26,8 +28,8 @@ public class PlayerController {
     }
 
     @PostMapping
-    public Player createPlayer(@RequestBody Player player) {
-        return playerService.createPlayer(player.getName());
+    public Player createPlayer(@RequestBody CreatePlayerRequest request) {
+        return playerService.createPlayer(request.name());
     }
 
     @DeleteMapping("/{id}")
@@ -35,14 +37,16 @@ public class PlayerController {
         playerService.deletePlayer(id);
     }
 
-    @PutMapping("/{id}/deckel")
-    public Player updateDeckel(@PathVariable UUID id, @RequestBody int anzahl) {
-        return playerService.addDeckel(id, anzahl);
+    @PutMapping("/{id}/penalty-chips")
+    public ResponseEntity<Player> updatePenaltyChips(@PathVariable UUID id, @RequestBody PenaltyUpdate update) {
+
+        Player updatedPlayer = playerService.addPenaltyChips(id, update.amount());
+        return ResponseEntity.ok(updatedPlayer);
     }
 
     @PostMapping("/{id}/roll-virtual")
     public DiceRoll rollVirtual(@PathVariable UUID id) {
-        // Hier rufen wir den Chef-Service auf
+        // Delegate to service
         return playerService.performVirtualRoll(id);
     }
 
@@ -52,7 +56,7 @@ public class PlayerController {
             @RequestParam int d1,
             @RequestParam int d2,
             @RequestParam int d3) {
-        // Hier leiten wir die Handeingabe weiter
+        // Forward manual entry for processing
         return playerService.performManualRoll(id, d1, d2, d3);
     }
 

@@ -1,5 +1,4 @@
-
-### 1. Spieler erstellen
+### 1. Create a new player
 POST http://localhost:8080/api/players
 Content-Type: application/json
 
@@ -7,7 +6,7 @@ Content-Type: application/json
   "name": "Dobby"
 }
 
-### 1. Spieler erstellen
+### 2. Create another player
 POST http://localhost:8080/api/players
 Content-Type: application/json
 
@@ -15,17 +14,25 @@ Content-Type: application/json
   "name": "Mattes"
 }
 
-### 2. Würfeln (Platzhalter - UUID erst gleich einfügen!)
-POST http://localhost:8080/api/players/1aa7ba85-d44b-4b37-9303-472349bb8f53/roll-virtual
+### 3. Perform virtual roll (Replace UUID after creation!)
+POST http://localhost:8080/api/players/INSERT-UUID-HERE/roll-virtual
 
-### 2. Würfeln (Platzhalter - UUID erst gleich einfügen!)
-POST http://localhost:8080/api/players/db9f58f7-f863-4de6-9a6c-8228838d48f9/roll-virtual
+### 4. Perform manual roll (Replace UUID after creation!)
+POST http://localhost:8080/api/players/INSERT-UUID-HERE/roll-manual?d1=1&d2=1&d3=1
 
-### 5. DER BEWEIS: Alle Spieler mit ihren Würfeln anzeigen
+### 5. Update penalty chips (Using the new DTO/Record approach)
+PUT http://localhost:8080/api/players/INSERT-UUID-HERE/penalty-chips
+Content-Type: application/json
+
+{
+  "amount": 2
+}
+
+### 6. Get all players (Verify dice and penalty chips)
 GET http://localhost:8080/api/players
 
-### Alle Würfel zurücksetzen
+### 7. Reset all dice for a new round
 POST http://localhost:8080/api/players/reset-dice
 
-### Check: Sind alle Würfel null?
+### 8. Final check: Are all dice cleared (null)?
 GET http://localhost:8080/api/players

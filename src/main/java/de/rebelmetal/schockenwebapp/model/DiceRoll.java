@@ -1,12 +1,12 @@
 package de.rebelmetal.schockenwebapp.model;
 
 import jakarta.persistence.Embeddable;
-import jakarta.persistence.Embedded;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import lombok.ToString;
 
-import java.util.Arrays;
+
 import java.util.Collections;
 import java.util.stream.IntStream;
 
@@ -14,6 +14,7 @@ import java.util.stream.IntStream;
 @EqualsAndHashCode
 @Embeddable
 @NoArgsConstructor
+@ToString
 public class DiceRoll implements Comparable<DiceRoll> {
     private  int[] dice;
 
@@ -28,8 +29,6 @@ public class DiceRoll implements Comparable<DiceRoll> {
                 .sorted(Collections.reverseOrder())
                 .mapToInt(Integer::intValue) // Zurück zu int
                 .toArray();
-
-        System.out.println("Absteigend sortiert: " + Arrays.toString(this.dice));
     }
 
     public String getType() {
@@ -69,6 +68,4 @@ public class DiceRoll implements Comparable<DiceRoll> {
 
         return Integer.compare(myValue, otherValue);
     }
-
-
 }

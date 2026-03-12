@@ -1,20 +1,24 @@
 package de.rebelmetal.schockenwebapp.service;
 
+import de.rebelmetal.schockenwebapp.exception.PlayerNotFoundException;
 import de.rebelmetal.schockenwebapp.model.DiceRoll;
 import de.rebelmetal.schockenwebapp.model.Player;
 import de.rebelmetal.schockenwebapp.repository.PlayerRepository;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.UUID;
 
 /**
- * Service-Klasse für die Geschäftslogik der Spielerverwaltung.
- * Trennt die Datenbankzugriffe (Repository) von der Web-Schicht (Controller).
+ * Service class for the business logic of player management.
+ * Decouples database access (repository) from the web layer (controller).
  */
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class PlayerService {
 
     private final PlayerRepository playerRepository;
@@ -25,61 +29,73 @@ public class PlayerService {
         return playerRepository.findAll();
     }
 
+    @Transactional
     public Player createPlayer(String name) {
         Player player = new Player(UUID.randomUUID(), name, 0, false, null);
-        return playerRepository.save(player);
+        Player savedPlayer = playerRepository.save(player);
+        log.info("New player created: {} (ID: {})", savedPlayer.getName(), savedPlayer.getId());
+        return savedPlayer;
     }
 
+    @Transactional
     public void deletePlayer(UUID id) {
         playerRepository.deleteById(id);
+        log.info("Player with ID {} deleted.", id);
     }
 
     /**
-     * Erhöht die Deckelanzahl eines Spielers.
-     * Hier könnten später Spielregeln geprüft werden (z.B. max. 13 Deckel).
+     * Raise the amount of penalty-chips for the player.
+     * Validation of game rules (e.g., maximum of 13 penalty chips) could be performed here.
      */
-    public Player addDeckel(UUID id, int anzahl) {
+    @Transactional
+    public Player addPenaltyChips(UUID id, int amount) {
         return playerRepository.findById(id).map(p -> {
-            p.setDeckel(p.getDeckel() + anzahl);
-            return playerRepository.save(p);
-        }).orElseThrow(() -> new RuntimeException("Spieler nicht gefunden"));
+            p.setPenaltyChips(p.getPenaltyChips() + amount);
+            Player savedPlayer = playerRepository.save(p);
+            log.info("Added {} penalty chips to player '{}'. Total: {}", amount, savedPlayer.getName(), savedPlayer.getPenaltyChips());
+            return savedPlayer;
+        }).orElseThrow(() -> new PlayerNotFoundException("Player with ID " + id + " not found"));
     }
 
+    @Transactional
     public DiceRoll performVirtualRoll(UUID playerId) {
         Player player = playerRepository.findById(playerId)
-                .orElseThrow(() -> new RuntimeException("Spieler nicht gefunden"));
+                .orElseThrow(() -> new PlayerNotFoundException("Player with ID " + playerId + " not found"));
 
         DiceRoll roll = diceService.rollVirtually();
 
-        player.setLetzterWurf(roll); // 3. Dem Spieler den Wurf zuweisen
-        playerRepository.save(player); // 4. Den Spieler SPEICHERN
+        player.setLastRoll(roll); // Assign the roll to the player
+        playerRepository.save(player); // Save the updated player state
 
-        System.out.println("Spieler " + player.getName() + " hat gewürfelt: " + roll.getDice());
+        log.info("Player '{}' performed virtual roll: {}", player.getName(), roll);
         return roll;
     }
 
+    @Transactional
     public DiceRoll performManualRoll(UUID playerId, int d1, int d2, int d3) {
         Player player = playerRepository.findById(playerId)
-                .orElseThrow(() -> new RuntimeException("Spieler nicht gefunden"));
+                .orElseThrow(() -> new PlayerNotFoundException("Player with ID " + playerId + " not found"));
 
         DiceRoll roll = diceService.rollManually(d1, d2, d3);
 
-        player.setLetzterWurf(roll); // 3. Dem Spieler den Wurf zuweisen
-        playerRepository.save(player); // 4. Den Spieler SPEICHERN
+        player.setLastRoll(roll); // Assign the manual roll to the player
+        playerRepository.save(player); // Save the updated player state
 
+        log.info("Player '{}' performed manual roll: {}", player.getName(), roll);
         return roll;
     }
 
+    @Transactional
     public void resetAllDice() {
-        // 1. Alle Spieler aus der DB laden
+        // 1. Fetch all players from DB
         List<Player> allPlayers = playerRepository.findAll();
 
-        // 2. Jedem Spieler den Wurf wegnehmen
-        allPlayers.forEach(player -> player.setLetzterWurf(null));
+        // 2. Clear the last roll for every player
+        allPlayers.forEach(player -> player.setLastRoll(null));
 
-        // 3. Alle auf einmal speichern
+        // 3. Save all updated players at once
         playerRepository.saveAll(allPlayers);
 
-        System.out.println("Runde beendet: Alle Würfel wurden vom Tisch geräumt.");
+        log.info("Round ended: All dice have been cleared from the table for {} players.", allPlayers.size());
     }
 }

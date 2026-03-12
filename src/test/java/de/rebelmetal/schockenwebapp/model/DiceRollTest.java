@@ -3,6 +3,7 @@ package de.rebelmetal.schockenwebapp.model;
 import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
 
+
 class DiceRollTest {
 
     @Test
@@ -13,10 +14,6 @@ class DiceRollTest {
 
         // Wir berechnen das Ergebnis manuell für die Konsole
         int ergebnis = hoch.compareTo(niedrig);
-
-        // Das hilft uns beim Debuggen:
-        System.out.println("Vergleich: 'hoch' gegen 'niedrig'");
-        System.out.println("Ergebnis von compareTo: " + ergebnis);
 
         // WICHTIG: compareTo gibt eine POSITIVE Zahl zurück, wenn das erste Objekt GRÖSSER ist.
         // Ein Test schlägt fehl, wenn die Bedingung (ergebnis > 0) false ist.

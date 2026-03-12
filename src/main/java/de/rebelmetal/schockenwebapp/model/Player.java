@@ -1,9 +1,10 @@
 package de.rebelmetal.schockenwebapp.model;
 
+import jakarta.persistence.AttributeOverride;
+import jakarta.persistence.Column;
 import jakarta.persistence.Embedded;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
-import jakarta.persistence.Transient;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -11,11 +12,9 @@ import lombok.NoArgsConstructor;
 import java.util.UUID;
 
 /**
- * Das Datenmodell für einen Spieler im Schocken-Spiel.
- * * Diese Klasse wird als JPA-Entity verwendet, um Spielerdaten persistent in der
- * H2-Datenbank zu speichern. Lombok-Annotationen (@Data, @AllArgsConstructor, @NoArgsConstructor)
- * werden genutzt, um den notwendigen Boilerplate-Code für Getter, Setter und
- * Konstruktoren automatisch zu generieren.
+ * Data model for a player in the "Schocken" game.
+ * Renamed to professional English standards while maintaining 
+ * database backward compatibility via @Column and @AttributeOverride.
  */
 @Data
 @AllArgsConstructor
@@ -23,30 +22,30 @@ import java.util.UUID;
 @Entity
 public class Player {
 
-    /**
-     * Eindeutige Identifikationsnummer des Spielers.
-     * Dient als Primärschlüssel (@Id) in der Datenbank.
-     */
     @Id
     private UUID id;
 
-    /**
-     * Der gewählte Anzeigename des Spielers.
-     */
     private String name;
 
     /**
-     * Aktuelle Anzahl der Strafpunkte (Deckel) des Spielers.
+     * Penalty chips (formerly 'deckel').
+     * Mapping to DB column 'deckel' for backward compatibility.
      */
-    private int deckel;
+    @Column(name = "deckel")
+    private int penaltyChips;
 
     /**
-     * Status, ob der Spieler in der aktuellen Runde sicher ist.
+     * Safety status (formerly 'istSicher').
+     * Renamed to 'safe' (Lombok generates 'isSafe()').
      */
-    private boolean istSicher;
+    @Column(name = "istSicher")
+    private boolean safe;
 
-    // NEU: Hier speichern wir das Ergebnis des letzten Wurfs
+    /**
+     * The result of the last dice roll (formerly 'letzterWurf').
+     * Overriding the embedded field 'dice' to map to 'letzterWurf'.
+     */
     @Embedded
-    private DiceRoll letzterWurf;
+    @AttributeOverride(name = "dice", column = @Column(name = "letzterWurf"))
+    private DiceRoll lastRoll;
 }
-
