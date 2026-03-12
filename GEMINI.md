@@ -9,25 +9,29 @@ Dieses Dokument dient als zentrale Anlaufstelle für spezifische Anweisungen und
 
 ## Konventionen
 
-### Git-Commit-Konventionen
+## Mentoren
+- **Java Mentor:** [.gemini/mentor/java_mentor.md](.gemini/mentor/java_mentor.md)
+  - Dieser Mentor wird bei allen Java-spezifischen Fragen und Diskussionen hinzugezogen. Seine Regeln (z. B. Fokus auf Konzepte statt nur Code, Clean Code Best Practices) sind strikt zu befolgen.
 
-**ERFORDERLICH** für alle Commits. Die Betreffzeile gibt an, *was* geändert wurde. Der Textkörper MUSS alle drei Fragen beantworten:
+### Git Commit Conventions
 
-1. **Warum der alte Code ein Problem war** – was ihn fehlerhaft, instabil oder unvollständig gemacht hat.
-2. **Welches Szenario das Problem auslöst** – die Bedingung, Eingabe oder das Ereignis, das den Fehler/das Problem verursacht.
-3. **Wie das neue Verhalten ist** – insbesondere bei Fehlern oder Grenzfällen.
+**MANDATORY** for all commits. All commit messages MUST be written in **English**. The subject line indicates *what* was changed. The body MUST answer these three questions:
+
+1. **Why the old code was problematic** – what made it buggy, unstable, or incomplete.
+2. **The triggering scenario** – the condition, input, or event that causes the bug/issue.
+3. **The new behavior** – specifically for errors or edge cases.
 
 **Format:**
 
-`typ: Kurzer Betreff (was geändert wurde)`
+`type: short subject (what was changed)`
 
-`Warum der alte Code problematisch war: <Erklärung des Mangels>.`
-`Auslösendes Szenario: <Erklärung, was das Problem verursacht>.`
-`Neues Verhalten: <Erklärung, was jetzt passiert, insbesondere im Fehlerfall>.`
+`Why the old code was problematic: <explanation of the deficiency>.`
+`Trigger scenario: <explanation of what causes the issue>.`
+`New behaviour: <explanation of what happens now, especially in error cases>.`
 
-**Beispiel:**
+**Example:**
 
-`fix: Verhindert unbegrenzten Speicherverbrauch bei übergroßen models.dev Antworten`
+`fix: prevent unbounded memory usage for oversized models.dev responses`
 
-`Zuvor hat toArray() die gesamte HTTP-Antwort vor dem Parsen gepuffert. Ein fehlerhafter Payload oder eine CDN-Anomalie konnte beliebig viel Speicher verbrauchen, ohne expliziten Fehlermodus.`
-`Jetzt wird die Antwort gestreamt und abgebrochen, wenn sie 5 MB überschreitet, wodurch der Fehler explizit wird – er wird an den vorhandenen Error-Handler weitergeleitet, der eine Warnung protokolliert und den Fehler kurzzeitig zwischenspeichert, um die API nicht zu überlasten.`
+`Previously, toArray() buffered the entire HTTP response before parsing. A malformed payload or CDN anomaly could consume arbitrary memory with no explicit failure mode.`
+`Now the response is streamed and aborted if it exceeds 5MB, making the failure explicit – it's routed to the existing error handler which logs a warning and briefly caches the failure to avoid hammering the API.`
