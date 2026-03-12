@@ -16,7 +16,16 @@ Content-Type: application/json
 }
 
 ### 2. Würfeln (Platzhalter - UUID erst gleich einfügen!)
-POST http://localhost:8080/api/players/35dd999d-6983-4da9-8c85-0da19d8d6eb1/roll-virtual
+POST http://localhost:8080/api/players/1aa7ba85-d44b-4b37-9303-472349bb8f53/roll-virtual
 
 ### 2. Würfeln (Platzhalter - UUID erst gleich einfügen!)
-POST http://localhost:8080/api/players/45e50874-b41d-4703-a30b-5dd5dd3fa6f8/roll-virtual
+POST http://localhost:8080/api/players/db9f58f7-f863-4de6-9a6c-8228838d48f9/roll-virtual
+
+### 5. DER BEWEIS: Alle Spieler mit ihren Würfeln anzeigen
+GET http://localhost:8080/api/players
+
+### Alle Würfel zurücksetzen
+POST http://localhost:8080/api/players/reset-dice
+
+### Check: Sind alle Würfel null?
+GET http://localhost:8080/api/players
