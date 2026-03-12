@@ -55,4 +55,9 @@ public class PlayerController {
         // Hier leiten wir die Handeingabe weiter
         return playerService.performManualRoll(id, d1, d2, d3);
     }
+
+    @PostMapping("/reset-dice")
+    public void resetAllDice() {
+        playerService.resetAllDice();
+    }
 }

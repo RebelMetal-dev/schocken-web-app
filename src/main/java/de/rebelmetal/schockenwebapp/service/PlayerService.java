@@ -19,7 +19,6 @@ public class PlayerService {
 
     private final PlayerRepository playerRepository;
 
-
     private final DiceService diceService;
 
     public List<Player> getAllPlayers() {
@@ -27,7 +26,7 @@ public class PlayerService {
     }
 
     public Player createPlayer(String name) {
-        Player player = new Player(UUID.randomUUID(), name, 0, false,null);
+        Player player = new Player(UUID.randomUUID(), name, 0, false, null);
         return playerRepository.save(player);
     }
 
@@ -46,36 +45,41 @@ public class PlayerService {
         }).orElseThrow(() -> new RuntimeException("Spieler nicht gefunden"));
     }
 
-    /**
-     * Lässt einen Spieler virtuell würfeln (Zufall).
-     */
     public DiceRoll performVirtualRoll(UUID playerId) {
-        // 1. Spieler in der Datenbank suchen
         Player player = playerRepository.findById(playerId)
                 .orElseThrow(() -> new RuntimeException("Spieler nicht gefunden"));
 
-        // 2. Den DiceService würfeln lassen
         DiceRoll roll = diceService.rollVirtually();
 
-        // 3. Kurzes Feedback in der Konsole
-        System.out.println("Spieler " + player.getName() + " hat virtuell gewürfelt: " + roll.getType());
+        player.setLetzterWurf(roll); // 3. Dem Spieler den Wurf zuweisen
+        playerRepository.save(player); // 4. Den Spieler SPEICHERN
+
+        System.out.println("Spieler " + player.getName() + " hat gewürfelt: " + roll.getDice());
+        return roll;
+    }
+
+    public DiceRoll performManualRoll(UUID playerId, int d1, int d2, int d3) {
+        Player player = playerRepository.findById(playerId)
+                .orElseThrow(() -> new RuntimeException("Spieler nicht gefunden"));
+
+        DiceRoll roll = diceService.rollManually(d1, d2, d3);
+
+        player.setLetzterWurf(roll); // 3. Dem Spieler den Wurf zuweisen
+        playerRepository.save(player); // 4. Den Spieler SPEICHERN
 
         return roll;
     }
 
-    /**
-     * Registriert einen manuellen Wurf (echte Würfel vom Tisch).
-     */
-    public DiceRoll performManualRoll(UUID playerId, int d1, int d2, int d3) {
-        // 1. Spieler suchen
-        Player player = playerRepository.findById(playerId)
-                .orElseThrow(() -> new RuntimeException("Spieler nicht gefunden"));
+    public void resetAllDice() {
+        // 1. Alle Spieler aus der DB laden
+        List<Player> allPlayers = playerRepository.findAll();
 
-        // 2. Den DiceService nutzen, um die Eingabe zu verarbeiten
-        DiceRoll roll = diceService.rollManually(d1, d2, d3);
+        // 2. Jedem Spieler den Wurf wegnehmen
+        allPlayers.forEach(player -> player.setLetzterWurf(null));
 
-        System.out.println("Manueller Wurf für " + player.getName() + " registriert: " + roll.getType());
+        // 3. Alle auf einmal speichern
+        playerRepository.saveAll(allPlayers);
 
-        return roll;
+        System.out.println("Runde beendet: Alle Würfel wurden vom Tisch geräumt.");
     }
 }
