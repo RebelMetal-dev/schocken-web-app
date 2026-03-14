@@ -10,16 +10,16 @@ public class DiceService {
     private final Random random = new Random();
 
     public DiceRoll rollVirtually() {
-        int d1 = random.nextInt(6) + 1; // Erzeugt 0-5, +1 macht daraus 1-6
+        int d1 = random.nextInt(6) + 1; // Generates 0-5, +1 makes it 1-6
         int d2 = random.nextInt(6) + 1;
         int d3 = random.nextInt(6) + 1;
 
-        // Wir nutzen unser Model 'DiceRoll'
+        // We use our 'DiceRoll' model
         return new DiceRoll(d1, d2, d3);
     }
 
     public DiceRoll rollManually(int d1, int d2, int d3) {
-        // Wir nehmen einfach die Zahlen des Users und erstellen ein DiceRoll-Objekt
+        // Create a DiceRoll object from user-provided values
         return new DiceRoll(d1, d2, d3);
     }
 }
