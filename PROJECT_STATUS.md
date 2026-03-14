@@ -1,43 +1,37 @@
-# Project Status & Development Roadmap: Schocken Web App (March 2026)
+# Project Status: Schocken Web App (Refactoring & Game Logic)
 
-## 1. Project Vision
-A Spring Boot-based web application to digitalize the German dice game "Schocken".
-- **Primary Goal:** Portfolio project for Junior Java Developer (Backend focused).
-- **Secondary Goal:** Deepening knowledge of Spring Boot, JPA, Clean Code, and Internationalization (English coding standards).
+##  Current Project Phase
+Phase 1 (Foundation) completed. Transitioning to Phase 2 (Business Logic).
 
-## 2. Current Architecture (Status Quo)
-- **Tech Stack:** Java 17, Spring Boot 3.x, JPA/Hibernate, H2 (In-Memory), Lombok.
-- **Layers:** Controller -> Service -> Repository -> Model.
-- **Key Features:** 
-    - `DiceRoll` Value Object with automatic type detection (Schock, General, etc.).
-    - Player Management with basic CRUD.
-    - Virtual and Manual Dice Rolls.
+##  Completed Tasks (The Goldstandard)
+- **Internationalization**: Full migration from German/Denglisch to English naming conventions (e.g., `penaltyChips` instead of `deckel`).
+- **Domain Modeling**: `Player` entity is refactored; `DiceRoll` is an `@Embeddable` Value Object.
+- **API Design**: `PlayerController` uses RESTful principles with `ResponseEntity` and DTOs (`PenaltyUpdate`).
+- **Clean Code**: Business logic logging moved to `PlayerService`; models are logic-free.
+- **Persistence**: Database mapping via JPA/Hibernate fixed with `@AttributeOverride` to maintain legacy DB compatibility.
 
-## 3. The "Senior Architect's" Critique (Current Technical Debt)
-*As identified by the "Devil's Advocate" Mentor:*
-- **Denglish Code:** Mixed German/English naming (`addDeckel`, `letzterWurf`) is unprofessional.
-- **Error Handling:** Use of generic `RuntimeException` is a bad practice for REST APIs.
-- **Transaction Integrity:** Lack of `@Transactional` annotations on business logic methods.
-- **Testing:** Missing automated unit tests for core game logic and edge cases.
-- **Logging:** Use of `System.out.println` instead of professional SLF4J logging.
-- **Magic Numbers:** Hardcoded values (e.g., "6" for dice sides) in services.
+## 🛠 Project Context & Stand
+- **Language**: 100% English for code, comments, and architecture.
+- **Framework**: Spring Boot 3.x, JPA, H2 Database.
+- **State**: The application can manage players and basic chip counts but lacks game-specific rules (rounds/halves).
 
-## 4. Refactoring Strategy (Junior-to-Senior Path)
-### Phase 1: Foundation Clean-up (Current Focus)
-1. **Internationalization:** Complete rename of all German entities, variables, and methods to English (e.g., `deckel` -> `penaltyChips`).
-2. **Persistence Mapping:** Learning how to decouple Java field names from database column names using `@Column`.
-3. **Exception Hierarchy:** Implementing `CustomExceptions` and a `@ControllerAdvice` for clean API error responses.
-4. **Professional Logging:** Replacing all `System.out` with `@Slf4j`.
+##  Roadmap & Pending Tasks (Backlog)
 
-### Phase 2: Game Engine Logic
-1. **GameService:** Introducing a centralized game engine to manage rounds and turns.
-2. **Rule Implementation:** Automatic penalty distribution for "Schock Aus" (1,1,1).
-3. **Winner/Loser Determination:** Utilizing `DiceRoll.compareTo()` for automated round results.
+### 1. Domain Model Expansion (Next Step)
+- [ ] Add `boolean lostFirstHalf` to `Player` entity.
+- [ ] Add `boolean lostSecondHalf` to `Player` entity.
+- [ ] Implement `hasLostMatch()` method to identify the "Final Loser".
 
-## 5. Learning Journal (Interview Prep)
-- **Decoupling:** Why we separate Java names from DB columns (Backward Compatibility).
-- **Atomicity:** Why `@Transactional` is critical for multi-user consistency.
-- **Value Objects:** Why `DiceRoll` should be `@Embeddable` and Immutable.
+### 2. Game Session Logic
+- [ ] Implement a `GameSession` or `GameService` to track the `centralStack` (13 chips).
+- [ ] Develop `handleShockOut(UUID loserId)`:
+    - Must be `@Transactional`.
+    - Must transfer all remaining stack chips to the loser.
+    - Must mark the current half as lost for that player.
 
----
-*Status: In Refactoring (Denglisch Removal)*
+### 3. Validation & Error Handling
+- [ ] Implement `IllegalGameMoveException` for invalid actions (e.g., adding chips when the stack is empty).
+- [ ] Create a `@ControllerAdvice` for global API error mapping.
+
+### 4. Scoring Engine
+- [ ] Create `ScoringService` to rank dice results (Shock Out > General > Shock > Points).
