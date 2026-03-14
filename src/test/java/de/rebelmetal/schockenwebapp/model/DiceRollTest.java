@@ -3,65 +3,63 @@ package de.rebelmetal.schockenwebapp.model;
 import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
 
-
 class DiceRollTest {
 
     @Test
-    void testHausnummerVergleich() {
-        // Wir erstellen zwei Objekte
-        DiceRoll hoch = new DiceRoll(4, 4, 6); // Wird zu 664
-        DiceRoll niedrig = new DiceRoll(2, 5, 4); // Wird zu 542
+    void testHouseNumberComparison() {
+        // We create two objects
+        DiceRoll high = new DiceRoll(4, 4, 6); // Becomes 644
+        DiceRoll low = new DiceRoll(2, 5, 4);  // Becomes 542
 
-        // Wir berechnen das Ergebnis manuell für die Konsole
-        int ergebnis = hoch.compareTo(niedrig);
+        int result = high.compareTo(low);
 
-        // WICHTIG: compareTo gibt eine POSITIVE Zahl zurück, wenn das erste Objekt GRÖSSER ist.
-        // Ein Test schlägt fehl, wenn die Bedingung (ergebnis > 0) false ist.
-        assertTrue(ergebnis > 0, "542 sollte hoeher sein als 432, daher muss das Ergebnis > 0 sein");
+        // IMPORTANT: compareTo returns a POSITIVE number if the first object is GREATER.
+        assertTrue(result > 0, "644 should be higher than 542, so the result must be > 0");
     }
 
     @Test
-    void testGleicherWurf() {
+    void testIdenticalRolls() {
         DiceRoll w1 = new DiceRoll(1, 2, 3);
         DiceRoll w2 = new DiceRoll(3, 2, 1);
 
-        // Bei exakt gleichem Wert muss 0 kommen
-        assertEquals(0, w1.compareTo(w2), "Identische Wuerfe muessen 0 ergeben");
+        // For exactly the same value, it must return 0
+        assertEquals(0, w1.compareTo(w2), "Identical rolls must result in 0");
     }
 
     @Test
-    void testSchockGegenHausnummer() {
-        DiceRoll schock = new DiceRoll(1, 1, 2); // Rang 4
-        DiceRoll hausnummer = new DiceRoll(6, 6, 5); // Rang 1
+    void testShockAgainstHouseNumber() {
+        DiceRoll shock = new DiceRoll(1, 1, 2);    // Rank 4
+        DiceRoll houseNumber = new DiceRoll(6, 6, 5); // Rank 1
 
-        assertTrue(schock.compareTo(hausnummer) > 0, "Schock (Rang 4) muss hoeher sein als Hausnummer (Rang 1)");
+        assertTrue(shock.compareTo(houseNumber) > 0, "Shock (Rank 4) must be higher than House Number (Rank 1)");
     }
 
     @Test
-    void testHierarchie() {
-        DiceRoll schockAus = new DiceRoll(1, 1, 1);
-        DiceRoll schockZwei = new DiceRoll(2, 1, 1);
-        DiceRoll general = new DiceRoll(4, 4, 4);
-        DiceRoll strasse = new DiceRoll(6, 5, 4);
-        DiceRoll hausnummer = new DiceRoll(6, 6, 5);
+    void testHierarchy() {
+        DiceRoll shockOut = new DiceRoll(1, 1, 1);
+        DiceRoll shockTwo = new DiceRoll(2, 1, 1);
+        DiceRoll triplet = new DiceRoll(4, 4, 4);
+        DiceRoll straight = new DiceRoll(6, 5, 4);
+        DiceRoll houseNumber = new DiceRoll(6, 6, 5);
 
-        // Schock Aus ist der höchste Rang
-        assertTrue(schockAus.compareTo(schockZwei) > 0);
-        // Jeder Schock schlägt einen General
-        assertTrue(schockZwei.compareTo(general) > 0);
-        // General schlägt Straße
-        assertTrue(general.compareTo(strasse) > 0);
-        // Straße schlägt Hausnummer
-        assertTrue(strasse.compareTo(hausnummer) > 0);
+        // Shock Out is the highest rank
+        assertTrue(shockOut.compareTo(shockTwo) > 0);
+        // Any Shock beats a Triplet
+        assertTrue(shockTwo.compareTo(triplet) > 0);
+        // Triplet beats Straight
+        assertTrue(triplet.compareTo(straight) > 0);
+        // Straight beats House Number
+        assertTrue(straight.compareTo(houseNumber) > 0);
     }
+
     @Test
-    void testUngueltigeWerteSolltenExceptionWerfen() {
-        // Wir prüfen, ob die Exception geworfen wird, wenn eine 7 dabei ist
+    void testInvalidValuesShouldThrowException() {
+        // Check if exception is thrown when a 7 is provided
         assertThrows(IllegalArgumentException.class, () -> {
             new DiceRoll(7, 1, 1);
         });
 
-        // Wir prüfen, ob es bei einer 0 kracht
+        // Check if it fails for a 0
         assertThrows(IllegalArgumentException.class, () -> {
             new DiceRoll(0, 4, 2);
         });
