@@ -1,37 +1,48 @@
 # Project Status: Schocken Web App (Refactoring & Game Logic)
 
-##  Current Project Phase
-Phase 1 (Foundation) completed. Transitioning to Phase 2 (Business Logic).
+## 🎯 Current Project Phase
+**Phase 2: Transitioning from Player-Centric to Session-Centric Architecture.**
+*Current focus: Decoupling transient game state from persistent player identity.*
 
-##  Completed Tasks (The Goldstandard)
-- **Internationalization**: Full migration from German/Denglisch to English naming conventions (e.g., `penaltyChips` instead of `deckel`).
-- **Domain Modeling**: `Player` entity is refactored; `DiceRoll` is an `@Embeddable` Value Object.
-- **API Design**: `PlayerController` uses RESTful principles with `ResponseEntity` and DTOs (`PenaltyUpdate`).
-- **Clean Code**: Business logic logging moved to `PlayerService`; models are logic-free.
-- **Persistence**: Database mapping via JPA/Hibernate fixed with `@AttributeOverride` to maintain legacy DB compatibility.
+---
 
-## 🛠 Project Context & Stand
-- **Language**: 100% English for code, comments, and architecture.
-- **Framework**: Spring Boot 3.x, JPA, H2 Database.
-- **State**: The application can manage players and basic chip counts but lacks game-specific rules (rounds/halves).
+## 🏗️ Architecture & Learning Handouts
 
-##  Roadmap & Pending Tasks (Backlog)
+### 1. Domain Modeling: Value Objects vs. Entities
+*   **What?** We moved `DiceRoll` into an `@Embeddable` Value Object.
+*   **Why?** A dice roll doesn't need its own ID in the database. It belongs strictly to a player's action. By making it a Value Object, we encapsulate logic (sorting dice, determining types like "SHOCK_OUT") inside the object itself.
+*   **How?** Using JPA `@Embeddable` in the `DiceRoll` class and `@Embedded` in the `Player` class.
+*   **Glossary:** 
+    *   *Value Object:* An object that represents a descriptive aspect of the domain but has no identity (e.g., Color, Money, DiceRoll).
 
-### 1. Domain Model Expansion (Next Step)
-- [ ] Add `boolean lostFirstHalf` to `Player` entity.
-- [ ] Add `boolean lostSecondHalf` to `Player` entity.
-- [ ] Implement `hasLostMatch()` method to identify the "Final Loser".
+### 2. RESTful API & DTOs (Data Transfer Objects)
+*   **What?** We use `PlayerController` with specific DTOs like `PenaltyUpdate`.
+*   **Why?** Never expose your database entities directly to the API. If you change your database, you don't want to break the mobile app or website. DTOs act as a "contract" between the backend and the frontend.
+*   **How?** Controller methods return `ResponseEntity<DTO>` instead of `ResponseEntity<Entity>`.
+*   *Glossary:*
+    *   *DTO:* A simple object used to pass data between software processes. It contains no business logic.
 
-### 2. Game Session Logic
-- [ ] Implement a `GameSession` or `GameService` to track the `centralStack` (13 chips).
-- [ ] Develop `handleShockOut(UUID loserId)`:
-    - Must be `@Transactional`.
-    - Must transfer all remaining stack chips to the loser.
-    - Must mark the current half as lost for that player.
+### 3. Database Compatibility & Clean Code
+*   **What?** Renaming "Denglisch" fields (`deckel`, `istSicher`) to English (`penaltyChips`, `safe`) while keeping DB columns unchanged.
+*   **Why?** Code must be professional and international. Databases are often "legacy" and cannot be easily changed without breaking other systems.
+*   **How?** Using `@Column(name = "old_name")` to map clean Java names to ugly DB names.
 
-### 3. Validation & Error Handling
-- [ ] Implement `IllegalGameMoveException` for invalid actions (e.g., adding chips when the stack is empty).
-- [ ] Create a `@ControllerAdvice` for global API error mapping.
+---
 
-### 4. Scoring Engine
-- [ ] Create `ScoringService` to rank dice results (Shock Out > General > Shock > Points).
+## 🛠️ Pending Architectural Decisions (The "Devil's Advocate" Workshop)
+
+### 🔴 The "Frankenstein-Player" Problem (Current Discussion)
+*   **Problem:** Our `Player` entity currently holds game-specific data (`penaltyChips`, `lastRoll`, `lost_first_half`).
+*   **Architecture Goal:** **Separation of Concerns (SoC)**.
+*   **Proposed Solution:** Introduce a `GameSession` and a `GameParticipant` (Join-Entity).
+*   **Terminology:**
+    *   *SRP (Single Responsibility Principle):* A class should have one, and only one, reason to change.
+    *   *SoC (Separation of Concerns):* Dividing a computer program into distinct sections such that each section addresses a separate concern.
+
+---
+
+## ✅ Completed Tasks (The Goldstandard)
+- [x] Internationalization (English Naming)
+- [x] @Embeddable DiceRoll logic
+- [x] PenaltyUpdate DTO implementation
+- [x] JPA Mapping with @AttributeOverride
