@@ -31,7 +31,7 @@ public class PlayerService {
 
     @Transactional
     public Player createPlayer(String name) {
-        Player player = new Player(UUID.randomUUID(), name, 0, false, null);
+        Player player = new Player(UUID.randomUUID(), name);
         Player savedPlayer = playerRepository.save(player);
         log.info("New player created: {} (ID: {})", savedPlayer.getName(), savedPlayer.getId());
         return savedPlayer;
@@ -42,11 +42,11 @@ public class PlayerService {
         playerRepository.deleteById(id);
         log.info("Player with ID {} deleted.", id);
     }
-
-    /**
+/*
+    *//**
      * Raise the amount of penalty-chips for the player.
      * Validation of game rules (e.g., maximum of 13 penalty chips) could be performed here.
-     */
+     *//*
     @Transactional
     public Player addPenaltyChips(UUID id, int amount) {
         return playerRepository.findById(id).map(p -> {
@@ -97,5 +97,5 @@ public class PlayerService {
         playerRepository.saveAll(allPlayers);
 
         log.info("Round ended: All dice have been cleared from the table for {} players.", allPlayers.size());
-    }
+    }*/
 }

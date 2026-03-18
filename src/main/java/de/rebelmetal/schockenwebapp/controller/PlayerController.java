@@ -37,7 +37,7 @@ public class PlayerController {
         playerService.deletePlayer(id);
     }
 
-    @PutMapping("/{id}/penalty-chips")
+    /*@PutMapping("/{id}/penalty-chips")
     public ResponseEntity<Player> updatePenaltyChips(@PathVariable UUID id, @RequestBody PenaltyUpdate update) {
 
         Player updatedPlayer = playerService.addPenaltyChips(id, update.amount());
@@ -63,5 +63,5 @@ public class PlayerController {
     @PostMapping("/reset-dice")
     public void resetAllDice() {
         playerService.resetAllDice();
-    }
+    }*/
 }
