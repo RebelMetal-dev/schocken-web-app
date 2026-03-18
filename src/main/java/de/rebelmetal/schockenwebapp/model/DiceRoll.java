@@ -2,50 +2,63 @@ package de.rebelmetal.schockenwebapp.model;
 
 import jakarta.persistence.Embeddable;
 import lombok.EqualsAndHashCode;
-import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.ToString;
 
-
 import java.util.Collections;
+import java.util.List;
 import java.util.stream.IntStream;
 
-@Getter
+/**
+ * Immutable Value Object representing a single dice roll (3 dice).
+ * Encapsulates sorting and ranking logic for the game "Schocken".
+ */
 @EqualsAndHashCode
 @Embeddable
-@NoArgsConstructor
+@NoArgsConstructor(force = true)
 @ToString
 public class DiceRoll implements Comparable<DiceRoll> {
-    private  int[] dice;
+
+    private final List<Integer> dice;
 
     public DiceRoll(int d1, int d2, int d3) {
-        // 1. Validation (Defensive mode)
+        // Validation: Ensure all dice are within the legal range [1-6]
         if (IntStream.of(d1, d2, d3).anyMatch(n -> n < 1 || n > 6)) {
             throw new IllegalArgumentException("Dice values must be between 1 and 6!");
         }
 
+        // Store dice as an unmodifiable list, sorted descending for easier ranking
         this.dice = IntStream.of(d1, d2, d3)
-                .boxed() // Convert int to Integer object
+                .boxed()
                 .sorted(Collections.reverseOrder())
-                .mapToInt(Integer::intValue) // Back to int
-                .toArray();
+                .toList();
     }
 
+    /**
+     * Returns the unmodifiable list of dice.
+     * @return List of integers representing the three dice.
+     */
+    public List<Integer> getDice() {
+        return dice;
+    }
+
+    /**
+     * Identifies the type of the roll based on the sorted values.
+     * @return String identifier like "SHOCK_OUT", "TRIPLET", or "HOUSE_NUMBER".
+     */
     public String getType() {
-        return switch (dice) {
-            // Shock Out: [1, 1, 1]
-            case int[] d when d[0] == 1 && d[1] == 1 && d[2] == 1 -> "SHOCK_OUT";
-            // Shock X: [X, 1, 1] - Since sorted descending, ones are at the end!
-            case int[] d when d[1] == 1 && d[2] == 1 -> "SHOCK_" + d[0];
-            // Triplet: [X, X, X]
-            case int[] d when d[0] == d[1] && d[1] == d[2] -> "TRIPLET";
-            // Straight: [X, X-1, X-2] - Descending check!
-            case int[] d when d[0] == d[1] + 1 && d[1] == d[2] + 1 -> "STRAIGHT";
-            // Rest is house number
-            default -> "HOUSE_NUMBER";
-        };
+        if (dice.get(0) == 1 && dice.get(1) == 1 && dice.get(2) == 1) return "SHOCK_OUT";
+        if (dice.get(1) == 1 && dice.get(2) == 1) return "SHOCK_" + dice.get(0);
+        if (dice.get(0).equals(dice.get(1)) && dice.get(1).equals(dice.get(2))) return "TRIPLET";
+        if (dice.get(0) == dice.get(1) + 1 && dice.get(1) == dice.get(2) + 1) return "STRAIGHT";
+        
+        return "HOUSE_NUMBER";
     }
 
+    /**
+     * Internal rank used for comparing different types of rolls.
+     * @return Integer representing the power of the roll (higher is better).
+     */
     private int getRank() {
         return switch (getType()) {
             case "SHOCK_OUT" -> 5;
@@ -58,13 +71,13 @@ public class DiceRoll implements Comparable<DiceRoll> {
 
     @Override
     public int compareTo(DiceRoll other) {
-        // 1. Rank comparison
+        // Compare ranks first (e.g., SHOCK beats TRIPLET)
         int rankCompare = Integer.compare(this.getRank(), other.getRank());
         if (rankCompare != 0) return rankCompare;
 
-        // 2. House number comparison (Descending: Index 0 is the highest number!)
-        int myValue = this.dice[0] * 100 + this.dice[1] * 10 + this.dice[2];
-        int otherValue = other.dice[0] * 100 + other.dice[1] * 10 + other.dice[2];
+        // Compare values for "House Numbers" or identical types (e.g., SHOCK 4 vs SHOCK 2)
+        int myValue = this.dice.get(0) * 100 + this.dice.get(1) * 10 + this.dice.get(2);
+        int otherValue = other.dice.get(0) * 100 + other.dice.get(1) * 10 + other.dice.get(2);
 
         return Integer.compare(myValue, otherValue);
     }

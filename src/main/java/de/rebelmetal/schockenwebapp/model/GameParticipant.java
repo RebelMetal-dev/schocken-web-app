@@ -14,9 +14,9 @@ import lombok.NoArgsConstructor;
 import java.util.UUID;
 
 /**
- * The "bridge" or "join-entity" between Player and GameSession.
- * It holds the transient state of a player within a SPECIFIC game session.
- * This prevents "state leakage" and maintains a clean separation of concerns.
+ * Join entity between Player and GameSession.
+ * Stores the transient state of a player within a specific game.
+ * This ensures the core Player entity remains clean and reusable.
  */
 @Data
 @AllArgsConstructor
@@ -36,19 +36,22 @@ public class GameParticipant {
     private GameSession session;
 
     /**
-     * Penalty chips (formerly 'deckel' in Player).
+     * Penalty chips currently held by this participant.
      */
     private int penaltyChips;
 
+    /**
+     * Flag indicating if the player is safe for the current round.
+     */
     private boolean safe;
     
     /**
-     * If the player rolled the dice "blindly".
+     * Flag indicating if the player rolled without looking ("blind").
      */
     private boolean blind;
 
     /**
-     * The last roll within the current turn.
+     * The last dice roll performed in the current turn.
      */
     @Embedded
     @AttributeOverride(name = "dice", column = @Column(name = "last_roll"))
@@ -58,7 +61,8 @@ public class GameParticipant {
     private boolean lostSecondHalf;
 
     /**
-     * Business Logic: Check if the player has already lost the whole match.
+     * Business Logic: Determine if the player has lost both halves.
+     * @return true if both halves are lost.
      */
     public boolean hasLostMatch() {
         return lostFirstHalf && lostSecondHalf;

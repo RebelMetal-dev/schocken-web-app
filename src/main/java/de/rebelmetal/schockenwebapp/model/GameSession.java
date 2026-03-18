@@ -15,14 +15,14 @@ import java.util.List;
 import java.util.UUID;
 
 /**
- * Represents a specific game of "Schocken".
- * Holds the global state of the match.
+ * Represents a specific game session of "Schocken".
+ * Holds the global state and list of participants.
  */
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
 @Entity
-public class erst den service daGameSession {
+public class GameSession {
 
     @Id
     private UUID id;
@@ -31,12 +31,12 @@ public class erst den service daGameSession {
     private GamePhase phase;
 
     /**
-     * The 13 chips in the middle of the table.
+     * The number of penalty chips remaining in the central stack (initially 13).
      */
     private int centralStack;
 
     /**
-     * The list of participants currently sitting at this table.
+     * List of participants currently involved in this session.
      */
     @OneToMany(mappedBy = "session", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<GameParticipant> participants = new ArrayList<>();

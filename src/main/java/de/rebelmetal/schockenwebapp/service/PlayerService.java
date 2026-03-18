@@ -1,7 +1,6 @@
 package de.rebelmetal.schockenwebapp.service;
 
-import de.rebelmetal.schockenwebapp.exception.PlayerNotFoundException;
-import de.rebelmetal.schockenwebapp.model.DiceRoll;
+
 import de.rebelmetal.schockenwebapp.model.Player;
 import de.rebelmetal.schockenwebapp.repository.PlayerRepository;
 import lombok.RequiredArgsConstructor;
