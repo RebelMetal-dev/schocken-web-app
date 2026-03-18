@@ -1,11 +1,10 @@
-# 🎓
- Schocken Web App: Das Master-Handout für Java & Spring Architektur
+# Schocken Web App: Das Master-Handout für Java & Spring Architektur
 
 Dieses Dokument ist dein persönlicher "Survival-Guide". Es erklärt das "Warum" und "Wie" auf Senior-Level, aber mit Erklärungen für "Dummies", damit du es wirklich verstehst.
 
 ---
 
-## 🍃 1. Spring Framework & Spring Boot
+## 1. Spring Framework & Spring Boot
 
 ### @Transactional (Die "Alles-oder-Nichts"-Garantie)
 *   **Für Dummies:** Stell dir vor, du kaufst ein Eis. Du gibst das Geld (Schritt 1) und bekommst das Eis (Schritt 2). Wenn der Verkäufer nach dem Geld-Nehmen wegrennt, ohne dir das Eis zu geben, macht `@Transactional` die Zeit rückgängig: Du hast dein Geld wieder, als wäre nichts passiert.
@@ -17,7 +16,7 @@ Dieses Dokument ist dein persönlicher "Survival-Guide". Es erklärt das "Warum"
 
 ---
 
-## 🏗️ 2. Architektur-Konzepte (Die "Saubere-Code-Regeln")
+## 2. Architektur-Konzepte (Die "Saubere-Code-Regeln")
 
 ### Kopplung (Coupling) – "Das Klettverschluss-Problem"
 *   **Für Dummies:** Wenn zwei Legosteine mit Sekundenkleber zusammengeklebt sind, kriegst du sie nicht mehr auseinander, ohne sie kaputt zu machen (Starke Kopplung). Wir wollen aber, dass sie nur locker zusammengesteckt sind (Lose Kopplung).
@@ -33,7 +32,7 @@ Dieses Dokument ist dein persönlicher "Survival-Guide". Es erklärt das "Warum"
 
 ---
 
-## 💾 3. JPA (Java Persistence API) & Hibernate
+## 3. JPA (Java Persistence API) & Hibernate
 
 ### @Embeddable & @Embedded – "Das Paket im Paket"
 *   **Für Dummies:** Du hast eine Adresse (Strasse, PLZ, Stadt). Statt drei einzelne Zettel zu haben, packst du sie in einen Umschlag (`@Embeddable`). In deinem Personen-Ordner (Entity) klebst du diesen Umschlag einfach ein (`@Embedded`).
@@ -45,7 +44,7 @@ Dieses Dokument ist dein persönlicher "Survival-Guide". Es erklärt das "Warum"
 
 ---
 
-## ☕ 4. Java-Tools & Profi-Tricks
+## 4. Java-Tools & Profi-Tricks
 
 ### Records – "Die unveränderliche Postkarte"
 *   **Für Dummies:** Ein normales Objekt ist wie ein Notizbuch (man kann drin radieren). Ein `record` ist wie eine Postkarte, die mit Edding geschrieben wurde. Einmal fertig, kann man nichts mehr ändern (**Immutable**).
@@ -57,7 +56,7 @@ Dieses Dokument ist dein persönlicher "Survival-Guide". Es erklärt das "Warum"
 
 ---
 
-## 📚 Glossar für Junior Dummies (Update)
+## Glossar für Junior Dummies (Update)
 
 | Fachbegriff | Erklärung für Dummies |
 | :--- | :--- |
