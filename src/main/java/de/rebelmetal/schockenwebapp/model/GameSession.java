@@ -40,4 +40,13 @@ public class GameSession {
      */
     @OneToMany(mappedBy = "session", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<GameParticipant> participants = new ArrayList<>();
+
+    /**
+     * Adds a participant to this session and sets the back-reference.
+     * Keeps the bidirectional JPA relationship consistent.
+     */
+    public void addParticipant(GameParticipant participant) {
+        participant.setSession(this);
+        this.participants.add(participant);
+    }
 }

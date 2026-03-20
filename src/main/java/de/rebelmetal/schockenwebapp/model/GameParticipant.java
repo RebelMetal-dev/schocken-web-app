@@ -67,4 +67,11 @@ public class GameParticipant {
     public boolean hasLostMatch() {
         return lostFirstHalf && lostSecondHalf;
     }
+
+    /**
+     * Clears the last roll at the start of a new round.
+     */
+    public void resetRoll() {
+        this.lastRoll = null;
+    }
 }
