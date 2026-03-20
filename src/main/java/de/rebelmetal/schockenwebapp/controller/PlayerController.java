@@ -37,31 +37,4 @@ public class PlayerController {
         playerService.deletePlayer(id);
     }
 
-    /*@PutMapping("/{id}/penalty-chips")
-    public ResponseEntity<Player> updatePenaltyChips(@PathVariable UUID id, @RequestBody PenaltyUpdate update) {
-
-        Player updatedPlayer = playerService.addPenaltyChips(id, update.amount());
-        return ResponseEntity.ok(updatedPlayer);
-    }
-
-    @PostMapping("/{id}/roll-virtual")
-    public DiceRoll rollVirtual(@PathVariable UUID id) {
-        // Delegate to service
-        return playerService.performVirtualRoll(id);
-    }
-
-    @PostMapping("/{id}/roll-manual")
-    public DiceRoll rollManual(
-            @PathVariable UUID id,
-            @RequestParam int d1,
-            @RequestParam int d2,
-            @RequestParam int d3) {
-        // Forward manual entry for processing
-        return playerService.performManualRoll(id, d1, d2, d3);
-    }
-
-    @PostMapping("/reset-dice")
-    public void resetAllDice() {
-        playerService.resetAllDice();
-    }*/
 }
