@@ -1,6 +1,7 @@
 package de.rebelmetal.schockenwebapp.model;
 
 import jakarta.persistence.AttributeOverride;
+import jakarta.persistence.AttributeOverrides;
 import jakarta.persistence.Column;
 import jakarta.persistence.Embedded;
 import jakarta.persistence.Entity;
@@ -54,7 +55,11 @@ public class GameParticipant {
      * The last dice roll performed in the current turn.
      */
     @Embedded
-    @AttributeOverride(name = "dice", column = @Column(name = "last_roll"))
+    @AttributeOverrides({
+        @AttributeOverride(name = "dice",       column = @Column(name = "last_roll")),
+        @AttributeOverride(name = "hand",       column = @Column(name = "roll_is_hand")),
+        @AttributeOverride(name = "throwCount", column = @Column(name = "roll_throw_count"))
+    })
     private DiceRoll lastRoll;
 
     private boolean lostFirstHalf;
