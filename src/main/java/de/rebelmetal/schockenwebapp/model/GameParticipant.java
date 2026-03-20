@@ -61,6 +61,11 @@ public class GameParticipant {
     private boolean lostSecondHalf;
 
     /**
+     * Number of throws used to achieve the current roll (1 = hand-roll, 2–3 = combined).
+     */
+    private int throwCount;
+
+    /**
      * Business Logic: Determine if the player has lost both halves.
      * @return true if both halves are lost.
      */
@@ -69,9 +74,10 @@ public class GameParticipant {
     }
 
     /**
-     * Clears the last roll at the start of a new round.
+     * Clears the last roll and throw count at the start of a new round.
      */
     public void resetRoll() {
         this.lastRoll = null;
+        this.throwCount = 0;
     }
 }
