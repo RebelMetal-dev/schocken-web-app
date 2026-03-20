@@ -29,39 +29,38 @@ class RoundEvaluatorTest {
         return p;
     }
 
-    /**
-     * A Hand-Roll (hand=true, throwCount=2) must beat a Combined-Roll
-     * (hand=false, throwCount=2) of the same dice values.
-     * The combined-roll player loses.
-     */
     @Test
-    void handRollBeatsNonHandRollOfSameValue() {
+    void shouldWinWithHandOverCombined() {
+        // Shock 2: dice (2,1,1). Hand in 1 throw vs combined in 2 throws — same rank, hand wins.
         GameParticipant alice = participantWithRoll("Alice",
-                new DiceRoll(4, 3, 2, true, 2));   // hand
+                new DiceRoll(2, 1, 1, true, 1));   // Shock 2, hand, 1 throw
         GameParticipant bob = participantWithRoll("Bob",
-                new DiceRoll(4, 3, 2, false, 2));   // combined
+                new DiceRoll(2, 1, 1, false, 2));   // Shock 2, combined, 2 throws
 
         GameParticipant loser = evaluator.findLoser(List.of(alice, bob));
 
         assertEquals("Bob", loser.getPlayer().getName(),
-                "Bob (non-hand) should lose against Alice (hand) with identical dice.");
+                "Bob (combined) must lose against Alice (hand) — hand bonus applies.");
     }
 
-    /**
-     * "Mitkommen ist verloren": if two participants have identical rolls
-     * in every dimension, the one who rolled LATER loses.
-     */
     @Test
-    void lifoTieBreakerAppliesOnPerfectTie() {
+    void shouldApplyLIFOWhoseComingIsLost() {
+        // Both Shock 3, both hand, same throwCount — perfect tie → later roller loses.
         GameParticipant first = participantWithRoll("First",
-                new DiceRoll(3, 2, 1, false, 2));
+                new DiceRoll(3, 1, 1, true, 1));
         GameParticipant second = participantWithRoll("Second",
-                new DiceRoll(3, 2, 1, false, 2));
+                new DiceRoll(3, 1, 1, true, 1));
 
-        // first rolled at index 0, second at index 1
         GameParticipant loser = evaluator.findLoser(List.of(first, second));
 
         assertEquals("Second", loser.getPlayer().getName(),
                 "Second (later roller) must lose on a perfect tie — Mitkommen ist verloren.");
+    }
+
+    @Test
+    void shouldThrowExceptionForInvalidDice() {
+        assertThrows(IllegalArgumentException.class,
+                () -> new DiceRoll(7, 1, 1),
+                "Dice value 7 is out of range and must throw IllegalArgumentException.");
     }
 }

@@ -1,6 +1,7 @@
 package de.rebelmetal.schockenwebapp.service;
 
 import de.rebelmetal.schockenwebapp.exception.PlayerNotFoundException;
+import de.rebelmetal.schockenwebapp.model.DiceRoll;
 import de.rebelmetal.schockenwebapp.model.GameParticipant;
 import de.rebelmetal.schockenwebapp.model.GamePhase;
 import de.rebelmetal.schockenwebapp.model.GameSession;
@@ -30,6 +31,7 @@ public class GameService {
     private final GameSessionRepository gameSessionRepository;
     private final GameParticipantRepository gameParticipantRepository;
     private final PlayerRepository playerRepository;
+    private final DiceService diceService;
 
     /**
      * Creates a new game session with a list of players.
@@ -79,8 +81,63 @@ public class GameService {
         session.setParticipants(participants);
 
         log.info("New GameSession created with ID: {} and {} players.", session.getId(), participants.size());
-        
+
         // 6. Persistence: Cascade will save participants automatically
         return gameSessionRepository.save(session);
+    }
+
+    /**
+     * Performs a virtual (randomised) dice roll for a participant.
+     *
+     * @param sessionId     The active game session.
+     * @param participantId The participant who is rolling.
+     * @param hand          True if all three dice were thrown in a single attempt.
+     * @param throwCount    Number of throws used (1–3).
+     * @return The updated GameParticipant.
+     */
+    @Transactional
+    public GameParticipant performVirtualRoll(UUID sessionId, UUID participantId,
+                                              boolean hand, int throwCount) {
+        GameParticipant participant = resolveParticipant(sessionId, participantId);
+        DiceRoll roll = diceService.rollVirtually(hand, throwCount);
+        participant.setLastRoll(roll);
+        participant.setThrowCount(throwCount);
+        gameParticipantRepository.save(participant);
+        log.info("Participant '{}' rolled virtually: {}", participant.getPlayer().getName(), roll);
+        return participant;
+    }
+
+    /**
+     * Registers a manually entered dice roll for a participant.
+     *
+     * @param sessionId     The active game session.
+     * @param participantId The participant who is rolling.
+     * @param d1            Value of die 1.
+     * @param d2            Value of die 2.
+     * @param d3            Value of die 3.
+     * @param hand          True if all three dice were thrown in a single attempt.
+     * @param throwCount    Number of throws used (1–3).
+     * @return The updated GameParticipant.
+     */
+    @Transactional
+    public GameParticipant performManualRoll(UUID sessionId, UUID participantId,
+                                             int d1, int d2, int d3,
+                                             boolean hand, int throwCount) {
+        GameParticipant participant = resolveParticipant(sessionId, participantId);
+        DiceRoll roll = diceService.rollManually(d1, d2, d3, hand, throwCount);
+        participant.setLastRoll(roll);
+        participant.setThrowCount(throwCount);
+        gameParticipantRepository.save(participant);
+        log.info("Participant '{}' rolled manually: {}", participant.getPlayer().getName(), roll);
+        return participant;
+    }
+
+    private GameParticipant resolveParticipant(UUID sessionId, UUID participantId) {
+        GameSession session = gameSessionRepository.findById(sessionId)
+                .orElseThrow(() -> new IllegalArgumentException("Session not found: " + sessionId));
+        return session.getParticipants().stream()
+                .filter(p -> p.getId().equals(participantId))
+                .findFirst()
+                .orElseThrow(() -> new IllegalArgumentException("Participant not found: " + participantId));
     }
 }
