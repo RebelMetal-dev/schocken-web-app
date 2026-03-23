@@ -46,10 +46,14 @@ A Spring Boot-based digitalization of the "Schocken" dice game, following Clean 
 The service layer currently handles individual rounds but has no concept of a complete
 game arc. The following must be implemented in order before REST endpoints are meaningful:
 
-### 4a. Virtual Roll Storage
+### 4a. Virtual Roll Storage + Round Completion Guard *(combined — Architect: Gemini)*
 * Add `performVirtualRoll(UUID sessionId, UUID participantId)` to `GameService`.
 * `DiceService.rollVirtually()` currently returns a `DiceRoll` object only — no service
   method persists it to the DB. A virtual roll must be stored like a manual roll.
+* **4a.1 — Null-Guard (combined):** Add a precondition to `evaluateRoundAndDistributeChips`
+  that checks `getLastRoll() != null` for all rollers before evaluation begins. This is
+  implemented in the same step as virtual roll storage — testing 4a immediately surfaces
+  null-roll scenarios when not all players have rolled yet. *(Resolves Technical Debt, Section 6)*
 
 ### 4b. Round Reset
 * `GameParticipant.resetRoll()` exists but is never called automatically.
@@ -61,21 +65,16 @@ game arc. The following must be implemented in order before REST endpoints are m
 * `GameService` must set `lostFirstHalf = true` on the loser when `SECOND_HALF` is entered,
   and `lostSecondHalf = true` on the loser at the end of the second half.
 
-### 4d. Round Completion Guard
-* No current check ensures all participants have rolled before `evaluateRoundAndDistributeChips`
-  is called. A precondition (`getLastRoll() != null` for all rollers) must be enforced
-  to prevent a silent NPE in `RoundEvaluator`. *(See Technical Debt, Section 6)*
-
-### 4e. FINAL_MATCH Logic
+### 4d. FINAL_MATCH Logic
 * When a participant has `lostFirstHalf && lostSecondHalf` (`hasLostMatch() == true`),
   they enter the final match.
 * Transition to `GamePhase.FINAL_MATCH` and determine the two finalists.
 
-### 4f. GAME_OVER Condition
+### 4e. GAME_OVER Condition
 * After the final match, determine the ultimate loser and transition to `GAME_OVER`.
 
-### 4g. REST Controllers & DTO Mapping
-* Only build controllers after 4a–4f are complete and tested.
+### 4f. REST Controllers & DTO Mapping
+* Only build controllers after 4a–4e are complete and tested.
 * Expose game actions via REST; map internal entities to DTOs to avoid leaking domain objects.
 * Global exception handling for rule violations (e.g. rolling out of turn).
 
