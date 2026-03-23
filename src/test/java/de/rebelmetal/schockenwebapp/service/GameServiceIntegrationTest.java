@@ -101,14 +101,18 @@ class GameServiceIntegrationTest {
         // When: Evaluating the round
         gameService.evaluateRoundAndDistributeChips(testSession.getId(), rollerIds);
 
-        // Then: Loser receives remaining chips and phase transitions to second half
+        // Then: First half ends → chips reset to center, second half begins
         GameSession updatedSession = gameSessionRepository.findById(testSession.getId()).orElseThrow();
         GameParticipant updatedLoser = updatedSession.getParticipants().stream()
                 .filter(p -> p.getId().equals(player2.getId()))
                 .findFirst().orElseThrow();
 
-        assertThat(updatedLoser.getPenaltyChips()).isEqualTo(5);
-        assertThat(updatedSession.getCentralStack()).isEqualTo(0);
+        // 4c: lostFirstHalf flag set on the loser who triggered the half-end
+        assertThat(updatedLoser.isLostFirstHalf()).isTrue();
+        // 4c: all penalty chips returned to center (chip reset)
+        assertThat(updatedSession.getParticipants()).allMatch(p -> p.getPenaltyChips() == 0);
+        // 4c: central stack reset to 13 for the second half
+        assertThat(updatedSession.getCentralStack()).isEqualTo(13);
         assertThat(updatedSession.getPhase()).isEqualTo(GamePhase.SECOND_HALF);
     }
 

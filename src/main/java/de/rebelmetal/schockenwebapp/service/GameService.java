@@ -149,7 +149,30 @@ public class GameService {
             distributeChips(session, winner, loser, penalty);
         }
 
-        if (session.getCentralStack() == 0) session.setPhase(GamePhase.SECOND_HALF);
+        // 4c — First half end: central stack emptied
+        // The loser of the round that emptied the stack is the first half loser.
+        if (session.getPhase() == GamePhase.FIRST_HALF && session.getCentralStack() == 0) {
+            loser.setLostFirstHalf(true);
+            log.info("First half over. {} lost.", loser.getPlayer().getName());
+            session.getParticipants().forEach(p -> p.setPenaltyChips(0));
+            session.setCentralStack(13);
+            session.setPhase(GamePhase.SECOND_HALF);
+        }
+
+        // 4c — Second half end: central stack emptied again
+        // Two if-blocks (not else-if): a ShockOut on a full stack could trigger both
+        // transitions in a single call — the centralStack reset to 13 prevents double-firing.
+        if (session.getPhase() == GamePhase.SECOND_HALF && session.getCentralStack() == 0) {
+            loser.setLostSecondHalf(true);
+            log.info("Second half over. {} lost.", loser.getPlayer().getName());
+            if (loser.hasLostMatch()) {
+                // Same player lost both halves — no final needed
+                session.setPhase(GamePhase.GAME_OVER);
+            } else {
+                // Two different losers — they play a final match
+                session.setPhase(GamePhase.FINAL_MATCH);
+            }
+        }
 
         // 4b — Auto-reset all rolls for the next round
         rollers.forEach(GameParticipant::resetRoll);
