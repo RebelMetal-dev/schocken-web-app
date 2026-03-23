@@ -5,6 +5,7 @@ import de.rebelmetal.schockenwebapp.model.*;
 import de.rebelmetal.schockenwebapp.repository.GameParticipantRepository;
 import de.rebelmetal.schockenwebapp.repository.GameSessionRepository;
 import de.rebelmetal.schockenwebapp.repository.PlayerRepository;
+import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -96,11 +97,35 @@ public class GameService {
     }
 
     @Transactional
+    public GameParticipant performVirtualRoll(UUID sessionId, UUID participantId) {
+        GameSession session = gameSessionRepository.findById(sessionId)
+                .orElseThrow(() -> new EntityNotFoundException("Session not found: " + sessionId));
+        GameParticipant p = session.getParticipants().stream()
+                .filter(part -> part.getId().equals(participantId))
+                .findFirst()
+                .orElseThrow(() -> new EntityNotFoundException(
+                        "Participant " + participantId + " not in session " + sessionId));
+        int newThrowCount = p.getThrowCount() + 1;
+        boolean isHand = (newThrowCount == 1);
+        DiceRoll roll = diceService.rollVirtually(isHand, newThrowCount);
+        p.setLastRoll(roll);
+        p.setThrowCount(newThrowCount);
+        return gameParticipantRepository.save(p);
+    }
+
+    @Transactional
     public void evaluateRoundAndDistributeChips(UUID sessionId, List<UUID> participantIds) {
-        GameSession session = gameSessionRepository.findById(sessionId).orElseThrow();
+        GameSession session = gameSessionRepository.findById(sessionId)
+                .orElseThrow(() -> new EntityNotFoundException("Session not found: " + sessionId));
         List<GameParticipant> rollers = participantIds.stream()
                 .map(id -> session.getParticipants().stream().filter(p -> p.getId().equals(id)).findFirst().orElseThrow())
                 .toList();
+
+        // 4a.1 — Null-Guard: all participants must have rolled before evaluation
+        if (rollers.stream().anyMatch(p -> p.getLastRoll() == null)) {
+            throw new IllegalStateException(
+                    "Cannot evaluate round: not all participants have rolled yet.");
+        }
 
         GameParticipant loser = roundEvaluator.findLoser(rollers);
         GameParticipant winner = roundEvaluator.findWinner(rollers);
