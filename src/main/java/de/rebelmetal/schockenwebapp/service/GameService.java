@@ -52,6 +52,13 @@ public class GameService {
     public List<GameParticipant> evaluateSetupAndDetermineOrder(UUID sessionId, List<UUID> participantIds) {
         GameSession session = gameSessionRepository.findById(sessionId).orElseThrow();
 
+        if (session.getPhase() != GamePhase.WAITING_FOR_PLAYERS
+                && session.getPhase() != GamePhase.SETTING_UP_ORDER) {
+            throw new IllegalStateException(
+                    "evaluateSetupAndDetermineOrder requires phase WAITING_FOR_PLAYERS or SETTING_UP_ORDER, " +
+                    "but was: " + session.getPhase());
+        }
+
         List<GameParticipant> setupRollers = participantIds.stream()
                 .map(id -> session.getParticipants().stream().filter(p -> p.getId().equals(id)).findFirst().orElseThrow())
                 .toList();
@@ -65,7 +72,8 @@ public class GameService {
             session.setPhase(GamePhase.FIRST_HALF);
             log.info("Setup complete. Loser: {}", loser.getPlayer().getName());
         } else {
-            // Tie-break (Stechen) -> Clear rolls for tied participants only
+            // Tie-break (Stechen) -> transition to SETTING_UP_ORDER, clear rolls for tied participants
+            session.setPhase(GamePhase.SETTING_UP_ORDER);
             log.info("Setup tie-break needed for {} players.", lowestRollers.size());
             lowestRollers.forEach(p -> p.setLastRoll(null));
         }
@@ -118,6 +126,11 @@ public class GameService {
             int stolen = Math.min(winner.getPenaltyChips(), remaining);
             winner.setPenaltyChips(winner.getPenaltyChips() - stolen);
             loser.setPenaltyChips(loser.getPenaltyChips() + stolen);
+            if (stolen < remaining) {
+                log.warn("Chip deficit: {} chip(s) could not be distributed. " +
+                         "Stack empty, winner '{}' has 0 chips. Total in play may be < 13.",
+                        remaining - stolen, winner.getPlayer().getName());
+            }
         }
     }
 
