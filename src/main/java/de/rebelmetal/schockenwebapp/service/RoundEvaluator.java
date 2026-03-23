@@ -2,7 +2,6 @@ package de.rebelmetal.schockenwebapp.service;
 
 import de.rebelmetal.schockenwebapp.model.DiceRoll;
 import de.rebelmetal.schockenwebapp.model.GameParticipant;
-import de.rebelmetal.schockenwebapp.model.RollType;
 import org.springframework.stereotype.Component;
 
 import java.util.ArrayList;
@@ -46,12 +45,6 @@ public class RoundEvaluator {
 
     public int calculatePenalty(DiceRoll winnerRoll) {
         if (winnerRoll == null) return 0;
-        return switch (winnerRoll.getType()) {
-            case SHOCK_OUT -> 13;
-            case SHOCK -> winnerRoll.getDice().get(0); // Value of the first die
-            case TRIPLET -> 3;
-            case STRAIGHT -> 2;
-            case HOUSE_NUMBER -> 1;
-        };
+        return winnerRoll.getPenaltyValue();
     }
 }
