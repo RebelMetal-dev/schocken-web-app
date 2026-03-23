@@ -40,11 +40,11 @@ class GameServiceIT {
     void shouldDistributeChipsCorrectlyInFourPlayerRound() {
         // --- ARRANGE ---
 
-        // 1. Create 4 players
-        Player alice   = playerRepository.save(new Player(UUID.randomUUID(), "Alice"));
-        Player bob     = playerRepository.save(new Player(UUID.randomUUID(), "Bob"));
-        Player charlie = playerRepository.save(new Player(UUID.randomUUID(), "Charlie"));
-        Player diana   = playerRepository.save(new Player(UUID.randomUUID(), "Diana"));
+        // 1. Create 4 players (no explicit UUID — JPA generates it on INSERT)
+        Player alice   = playerRepository.save(new Player("Alice"));
+        Player bob     = playerRepository.save(new Player("Bob"));
+        Player charlie = playerRepository.save(new Player("Charlie"));
+        Player diana   = playerRepository.save(new Player("Diana"));
 
         // 2. Create session (initial central stack = 13)
         GameSession session = gameService.createSession(
