@@ -61,18 +61,57 @@ GameParticipant
 | Straße | Drei aufeinanderfolgende Werte | `2` |
 | Hausnummer | Kein Sonderfall | `1` |
 
-> ¹ **Semantische Konstante:** Der Wert `13` ist keine willkürliche Magic Number. Er ist direkt an die physische Steinanzahl im Schocken-Spiel gekoppelt und dient als Marker für "Halbzeit-Ende / Alles nehmen". Der Service erkennt diesen Wert als Auslöser für die Halbzeit-Ende-Routine.
+> ¹ **Semantische Konstante:** Der Wert `13` ist keine willkürliche Magic Number. Er ist direkt an die physische Steinanzahl im Schocken-Spiel gekoppelt und dient als Marker für "Halbzeit-Ende / Alles nehmen". Der Service erkennt diesen Sonderfall über `isShockOut()`, nicht über den Zahlenwert.
 
-### Pflicht-Methode (Phase 3)
+### DiceRoll — Implementierte Methoden
 
 ```java
-// DiceRoll.java
-public int getPenaltyValue() {
-    // Auswertungsreihenfolge: Schock Aus → Schock → General → Straße → Hausnummer
-}
+public int getPenaltyValue()  // Strafsteine basierend auf RollType (exhaustiver switch)
+public boolean isShockOut()   // true wenn RollType == SHOCK_OUT (Halbzeit-Trigger)
+public RollType getType()     // Kategorisiert den Wurf: SHOCK_OUT, SHOCK, TRIPLET, STRAIGHT, HOUSE_NUMBER
+public int compareTo(DiceRoll other) // Ranking: Typ > Hand > ThrowCount > Würfelwerte
 ```
 
-**Invarianten:**
-- `getPenaltyValue()` wird **ausschließlich** nach Verliererermittlung durch das Ranking aufgerufen.
-- Keine Penalty-Logik im Service — Delegation an `DiceRoll`.
-- Ranking-Vergleiche dürfen `throwCount` nie ignorieren (Hand-Bonus ginge verloren).
+---
+
+## 5. Technical Specs: GameService — Chip-Verteilungslogik
+
+### `evaluateRoundAndDistributeChips` — Ablauf
+
+```
+1. Session laden (einmalig)
+2. p1, p2 direkt aus session.getParticipants() auflösen
+3. RoundEvaluator.findLoser(List.of(p1, p2)) → loser bestimmen
+4. winner = (loser == p1) ? p2 : p1
+5. penalty = winner.getLastRoll().getPenaltyValue()
+6. if (winner.getLastRoll().isShockOut())
+       → handleShockOut: Loser nimmt alle verbleibenden Chips aus dem Stack
+       → session.setPhase(SECOND_HALF)
+   else
+       → distributeChips(session, winner, loser, penalty)
+       → if (session.getCentralStack() == 0) session.setPhase(SECOND_HALF)
+7. gameSessionRepository.save(session)  ← Cascade sichert Participants
+```
+
+### Chip-Verteilung: Phase 1 → Phase 2
+
+```
+Phase 1 — Zentraler Stapel:
+  fromStack = min(centralStack, penalty)
+  centralStack -= fromStack
+  loser.penaltyChips += fromStack
+
+Phase 2 — Spieler-zu-Spieler (wenn Stack leer und Fehlbetrag > 0):
+  stolen = min(winner.penaltyChips, remaining)
+  winner.penaltyChips -= stolen
+  loser.penaltyChips += stolen
+
+Edge Case: Weder Stack noch Winner haben genug Chips
+  → log.warn (kein Silent-Fail)
+```
+
+### Invarianten
+
+- Session wird **einmal** geladen — Participants werden direkt aus der geladenen Session aufgelöst (kein redundanter DB-Call).
+- Winner/Loser werden **intern** vom Service via `RoundEvaluator` bestimmt — der Controller übergibt nur Participant-IDs, nie Rollen.
+- `@Transactional` auf allen öffentlichen Methoden — Cascade-Save für Participants via Session-Save.

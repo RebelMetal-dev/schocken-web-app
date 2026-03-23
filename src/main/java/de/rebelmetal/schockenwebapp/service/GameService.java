@@ -32,6 +32,7 @@ public class GameService {
     private final GameParticipantRepository gameParticipantRepository;
     private final PlayerRepository playerRepository;
     private final DiceService diceService;
+    private final RoundEvaluator roundEvaluator;
 
     /**
      * Creates a new game session with a list of players.
@@ -132,6 +133,57 @@ public class GameService {
         return participant;
     }
 
+    /**
+     * Evaluates the outcome of a round between two participants.
+     * Determines the loser via RoundEvaluator and distributes chips based on the winner's roll.
+     */
+    @Transactional
+    public void evaluateRoundAndDistributeChips(UUID sessionId, UUID participant1Id, UUID participant2Id) {
+        // 1. Load the session once - this instance will be used to resolve participants
+        GameSession session = gameSessionRepository.findById(sessionId)
+                .orElseThrow(() -> new IllegalArgumentException("Session not found: " + sessionId));
+
+        // 2. Resolve participants directly from the loaded session's list to avoid redundant DB calls
+        GameParticipant p1 = session.getParticipants().stream()
+                .filter(p -> p.getId().equals(participant1Id))
+                .findFirst()
+                .orElseThrow(() -> new IllegalArgumentException("Participant 1 not found in session"));
+
+        GameParticipant p2 = session.getParticipants().stream()
+                .filter(p -> p.getId().equals(participant2Id))
+                .findFirst()
+                .orElseThrow(() -> new IllegalArgumentException("Participant 2 not found in session"));
+
+        // 3. Identify the loser using the RoundEvaluator (passing them as a list)
+        List<GameParticipant> roundParticipants = List.of(p1, p2);
+        GameParticipant loser = roundEvaluator.findLoser(roundParticipants);
+        GameParticipant winner = (loser == p1) ? p2 : p1;
+
+        // 4. The winner's roll determines the penalty value
+        DiceRoll winningRoll = winner.getLastRoll();
+        int penalty = winningRoll.getPenaltyValue();
+
+        log.info("Evaluation for session {}: Winner {} (Roll: {}), Loser {}. Penalty: {} chips",
+                sessionId, winner.getPlayer().getName(), winningRoll, loser.getPlayer().getName(), penalty);
+
+        // 5. Handle chip distribution and half-time state transitions
+        if (winningRoll.isShockOut()) {
+            handleShockOut(session, loser);
+            // A Shock Out by the winner immediately ends the current half for the loser
+            session.setPhase(GamePhase.SECOND_HALF);
+        } else {
+            distributeChips(session, winner, loser, penalty);
+
+            // If the central stack is now empty, transition to the next game phase
+            if (session.getCentralStack() == 0) {
+                session.setPhase(GamePhase.SECOND_HALF);
+            }
+        }
+
+        // 6. Persist changes (Cascade will handle participants)
+        gameSessionRepository.save(session);
+    }
+
     private GameParticipant resolveParticipant(UUID sessionId, UUID participantId) {
         GameSession session = gameSessionRepository.findById(sessionId)
                 .orElseThrow(() -> new IllegalArgumentException("Session not found: " + sessionId));
@@ -139,5 +191,34 @@ public class GameService {
                 .filter(p -> p.getId().equals(participantId))
                 .findFirst()
                 .orElseThrow(() -> new IllegalArgumentException("Participant not found: " + participantId));
+    }
+
+    private void distributeChips(GameSession session, GameParticipant winner, GameParticipant loser, int amount) {
+        // Step A: Take chips from the central stack first
+        int fromStack = Math.min(session.getCentralStack(), amount);
+        session.setCentralStack(session.getCentralStack() - fromStack);
+        loser.setPenaltyChips(loser.getPenaltyChips() + fromStack);
+
+        // Step B: If penalty is not satisfied, take from winner (Phase 2)
+        int remaining = amount - fromStack;
+        if (remaining > 0) {
+            if (winner.getPenaltyChips() > 0) {
+                int stolen = Math.min(winner.getPenaltyChips(), remaining);
+                winner.setPenaltyChips(winner.getPenaltyChips() - stolen);
+                loser.setPenaltyChips(loser.getPenaltyChips() + stolen);
+                log.info("Phase 2: {} chips moved from winner to loser", stolen);
+            } else {
+                // Safety log for edge cases where no chips are available anywhere
+                log.warn("Penalty of {} chips could not be fully distributed. No chips left.", remaining);
+            }
+        }
+    }
+
+    private void handleShockOut(GameSession session, GameParticipant loser) {
+        // On Shock Out, the loser takes everything that's left in the middle
+        int remaining = session.getCentralStack();
+        loser.setPenaltyChips(loser.getPenaltyChips() + remaining);
+        session.setCentralStack(0);
+        log.info("SHOCK OUT! Loser {} takes all {} remaining chips.", loser.getPlayer().getName(), remaining);
     }
 }

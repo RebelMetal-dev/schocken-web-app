@@ -27,17 +27,33 @@ Vollständiges Protokoll: `journals/2026/03_March/2026-03-20_protocol.md`
 
 ---
 
-## Phase 3: Penalty Logic — IN BEARBEITUNG
-*(Start: 23. März 2026)*
+## Phase 3: Penalty Logic & Service Layer — ABGESCHLOSSEN
+*(23. März 2026)*
 
-- Penalty Value Matrix konzeptionell entworfen und als technischer Vertrag festgelegt.
-- Werte: Schock Aus = 13 (semantische Konstante), Schock = 3. Würfel, General = 3, Straße = 2, Hausnummer = 1.
-- `DiceRoll.getPenaltyValue()` als Pflicht-Methode definiert — Implementierung ausstehend.
-- Dokumentations-Automatisierung via "Execution Command" eingeführt.
+### Model Layer — ABGESCHLOSSEN
 
-**Nächste Schritte:**
-- `getPenaltyValue()` implementieren.
-- Strafstein-Verteilungslogik im Service.
-- Anbindung an `GameSession` (Chip-Transfer).
+- `DiceRoll.getPenaltyValue()` implementiert (Penalty Value Matrix: Schock Aus = 13, Schock = 3. Würfel, General = 3, Straße = 2, Hausnummer = 1).
+- `DiceRoll.isShockOut()` hinzugefügt — exponiert Halbzeit-Trigger ohne die Konstante 13 zu leaken.
+- `DiceRollTest` auf 10 Cases erweitert (inkl. `6-6-6 → 3`, `1-2-3 → 2`).
+
+### Service Layer — ABGESCHLOSSEN
+
+- `RoundEvaluator` als Strategy-Komponente implementiert — bestimmt den Verlierer via `findLoser(List<GameParticipant>)`.
+- `GameService` finalisiert mit vollständiger Chip-Verteilungslogik:
+  - **Architektur-Entscheidung:** Umstieg von "Winner-ID von außen übergeben" auf "interne Verliererermittlung via `RoundEvaluator`". Der Service entscheidet selbst — der Controller gibt nur Participant-IDs.
+  - Phase 1: Chips zuerst aus dem zentralen Stapel.
+  - Phase 2: Fehlbetrag wird vom Winner abgezogen.
+  - SHOCK_OUT und leerer Stack lösen automatisch `GamePhase.SECOND_HALF` aus.
+
+**Status:** Abgeschlossen — alle Tests GRÜN.
 
 Vollständiges Protokoll: `journals/2026/03_March/2026-03-23_protocol.md`
+
+---
+
+## Phase 4: API & Web Interface — GEPLANT
+
+**Nächste Schritte:**
+- REST Controllers für Session-Management und Roll-Endpoints.
+- DTO-Mapping (interne Entities nicht direkt nach außen leaken).
+- Globales Exception-Handling für Regelver­stöße.
