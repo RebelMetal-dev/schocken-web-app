@@ -1,5 +1,6 @@
 package de.rebelmetal.schockenwebapp.service;
 
+import de.rebelmetal.schockenwebapp.dto.RoundResultDTO;
 import de.rebelmetal.schockenwebapp.exception.PlayerNotFoundException;
 import de.rebelmetal.schockenwebapp.model.*;
 import de.rebelmetal.schockenwebapp.repository.GameParticipantRepository;
@@ -13,7 +14,9 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -114,11 +117,16 @@ public class GameService {
     }
 
     @Transactional
-    public void evaluateRoundAndDistributeChips(UUID sessionId, List<UUID> participantIds) {
+    public RoundResultDTO evaluateRoundAndDistributeChips(UUID sessionId, List<UUID> participantIds) {
         GameSession session = gameSessionRepository.findById(sessionId)
                 .orElseThrow(() -> new EntityNotFoundException("Session not found: " + sessionId));
+
+        // map() preserves input order — critical for LIFO/FIFO tie-breaking
         List<GameParticipant> rollers = participantIds.stream()
-                .map(id -> session.getParticipants().stream().filter(p -> p.getId().equals(id)).findFirst().orElseThrow())
+                .map(id -> session.getParticipants().stream()
+                        .filter(p -> p.getId().equals(id))
+                        .findFirst()
+                        .orElseThrow(() -> new EntityNotFoundException("Participant not in session: " + id)))
                 .toList();
 
         // 4a.1 — Null-Guard: all participants must have rolled before evaluation
@@ -127,9 +135,13 @@ public class GameService {
                     "Cannot evaluate round: not all participants have rolled yet.");
         }
 
-        GameParticipant loser = roundEvaluator.findLoser(rollers);
+        GameParticipant loser  = roundEvaluator.findLoser(rollers);
         GameParticipant winner = roundEvaluator.findWinner(rollers);
         int penalty = roundEvaluator.calculatePenalty(winner.getLastRoll());
+
+        // 4b — Snapshot BEFORE reset: frontend sees what everyone rolled
+        Map<UUID, DiceRoll> rollsSnapshot = rollers.stream()
+                .collect(Collectors.toMap(GameParticipant::getId, GameParticipant::getLastRoll));
 
         if (winner.getLastRoll().isShockOut()) {
             handleShockOut(session, loser);
@@ -138,7 +150,18 @@ public class GameService {
         }
 
         if (session.getCentralStack() == 0) session.setPhase(GamePhase.SECOND_HALF);
+
+        // 4b — Auto-reset all rolls for the next round
+        rollers.forEach(GameParticipant::resetRoll);
+
         gameSessionRepository.save(session);
+        return new RoundResultDTO(
+                loser.getId(),
+                loser.getPlayer().getName(),
+                penalty,
+                rollsSnapshot,
+                session.getPhase() == GamePhase.GAME_OVER
+        );
     }
 
     private void distributeChips(GameSession session, GameParticipant winner, GameParticipant loser, int amount) {
