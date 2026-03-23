@@ -35,7 +35,19 @@ A Spring Boot-based digitalization of the "Schocken" dice game, following Clean 
 * **DTO Mapping:** Ensuring internal entities are not leaked directly to the web.
 * **Error Handling:** Global exception handling for game rule violations.
 
-## 5. Technical Debt & Notes
+## 4. Milestone 3: Testing & Stability (Completed ✅)
+* **`GameServiceIT`** — 4-player integration test: Shock 2 wins, House Number loses, 2 chips distributed from stack.
+* **`GameServiceIntegrationTest`** — 3-test suite covering setup tie-break (SETTING_UP_ORDER), Shock Out chip transfer, and Phase 2 winner-to-loser redistribution.
+* **`Player` entity fixed** — `@GeneratedValue(UUID)` added; `Player(String name)` constructor added to ensure correct JPA `persist()` lifecycle.
+* All 23 tests passing.
+
+## 5. Milestone 4: API & Web Interface (Planned ⏳)
+* **REST Controllers:** Exposing game actions to the frontend.
+* **DTO Mapping:** Ensuring internal entities are not leaked directly to the web.
+* **Error Handling:** Global exception handling for game rule violations.
+
+## 6. Technical Debt & Notes
 * *Note:* Ensure all future business logic remains in Services/Evaluators, not in Entities (SRP).
 * *Note:* Maintain 100% English naming convention for all new components.
 * *Note:* `@NoArgsConstructor(force = true)` on `DiceRoll` creates a JPA-only constructor with null dice — never call `new DiceRoll()` directly in production code.
+* *Tech Debt:* `RoundEvaluator` has no null-guard for `getLastRoll()`. Calling `evaluateRoundAndDistributeChips` before all participants have rolled causes a silent NPE. A precondition check (throw `IllegalStateException` if any roll is null) should be added before Phase 4 REST endpoints are exposed.

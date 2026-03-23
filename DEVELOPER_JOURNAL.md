@@ -52,6 +52,24 @@ Vollständiges Protokoll: `journals/2026/03_March/2026-03-20_protocol.md`
 
 **Status:** Abgeschlossen — alle Tests GRÜN.
 
+### Test-Debugging & JPA-Persistenz-Fix — ABGESCHLOSSEN
+*(24. März 2026)*
+
+- `GameServiceIntegrationTest` entwickelt und 5 Bugs behoben:
+  - Compile-Error: fehlendes `participantIds`-Argument in `evaluateSetupAndDetermineOrder()`
+  - Invertiertes Tie-Break-Szenario: die SCHLECHTESTEN Würfe müssen gleich sein, nicht die besten
+  - Zu breite Null-Assertion: nur Tie-Kandidaten erhalten `null`-Roll, nicht alle Participants
+  - Falscher Loser: `6-5-4` ist eine Straße, keine Hausnummer (`6-5-3` = echte Hausnummer)
+  - Falscher Loser: `2-2-1` (HOUSE_NUMBER) ist schlechter als `6-5-4` (STRAIGHT)
+- `GameServiceIT` repariert: `new Player(UUID.randomUUID(), ...)` → `new Player("Alice")` — JPA muss die ID generieren, nicht der Aufrufer
+- `Player`-Entity: `@GeneratedValue(UUID)` + `Player(String name)` — korrekte JPA `persist()`-Lifecycle
+- **Erkenntnisse:** Data Inconsistency (RAM vs. DB: `repository.save()` vor Service-Aufruf zwingend), Silent NPE im `RoundEvaluator` (kein null-Guard für `getLastRoll()` — Tech Debt für Phase 4)
+- Alle 23 Tests GRÜN.
+
+Vollständiges Protokoll: `journals/2026/03_March/2026-03-24_protocol.md`
+
+---
+
 ### Setup-Phase & Persistenz-Fix — ABGESCHLOSSEN
 
 - `IntegerListConverter` als `@AttributeConverter` implementiert: `List<Integer>` (Würfelwerte) wird als CSV-String in der DB gespeichert — JPA-Pflicht für Listentypen.
