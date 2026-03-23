@@ -38,12 +38,17 @@ Vollständiges Protokoll: `journals/2026/03_March/2026-03-20_protocol.md`
 
 ### Service Layer — ABGESCHLOSSEN
 
-- `RoundEvaluator` als Strategy-Komponente implementiert — bestimmt den Verlierer via `findLoser(List<GameParticipant>)`.
-- `GameService` finalisiert mit vollständiger Chip-Verteilungslogik:
-  - **Architektur-Entscheidung:** Umstieg von "Winner-ID von außen übergeben" auf "interne Verliererermittlung via `RoundEvaluator`". Der Service entscheidet selbst — der Controller gibt nur Participant-IDs.
+- `RoundEvaluator` als Strategy-Komponente implementiert:
+  - `findLoser(List<GameParticipant>)` — LIFO-Tie-Break: späterer Roller verliert bei Gleichstand.
+  - `findWinner(List<GameParticipant>)` — FIFO-Tie-Break: früherer Roller gewinnt bei Gleichstand.
+- `GameService.evaluateRoundAndDistributeChips` auf `List<UUID>` umgestellt (Multiplayer-fähig):
+  - **Architektur-Entscheidung:** Umstieg von zwei fixen IDs auf flexible Liste. Controller übergibt nur Reihenfolge — der Service entscheidet Gewinner/Verlierer intern.
+  - **Invariante:** Die Reihenfolge der IDs = Reihenfolge der Würfe. Diese Reihenfolge ist die alleinige Basis für den LIFO/FIFO-Tie-Break.
+  - Participants werden via `.map(id -> ...)` in exakter ID-Reihenfolge aufgelöst — nicht via `filter()` auf der Session-Liste.
   - Phase 1: Chips zuerst aus dem zentralen Stapel.
   - Phase 2: Fehlbetrag wird vom Winner abgezogen.
   - SHOCK_OUT und leerer Stack lösen automatisch `GamePhase.SECOND_HALF` aus.
+- `GameServiceIT` erstellt — Integrationstest mit 4 Spielern (Shock 2 gewinnt, Hausnummer verliert, 2 Chips aus Stack).
 
 **Status:** Abgeschlossen — alle Tests GRÜN.
 

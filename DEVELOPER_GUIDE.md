@@ -114,4 +114,6 @@ Edge Case: Weder Stack noch Winner haben genug Chips
 
 - Session wird **einmal** geladen — Participants werden direkt aus der geladenen Session aufgelöst (kein redundanter DB-Call).
 - Winner/Loser werden **intern** vom Service via `RoundEvaluator` bestimmt — der Controller übergibt nur Participant-IDs, nie Rollen.
+- **Order of IDs = Order of Play:** Die Reihenfolge der `participantIds`-Liste ist die alleinige Basis für den LIFO/FIFO-Tie-Break. Index 0 = zuerst gewürfelt. Der Controller ist verantwortlich, diese Reihenfolge korrekt zu liefern.
+- Participants werden via `.map(id -> session.getParticipants().stream().filter(...))` in exakter ID-Reihenfolge aufgelöst — **nicht** via `filter()` zuerst, da das die Session-Reihenfolge statt der Eingabe-Reihenfolge nutzen würde.
 - `@Transactional` auf allen öffentlichen Methoden — Cascade-Save für Participants via Session-Save.

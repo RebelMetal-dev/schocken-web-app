@@ -134,53 +134,54 @@ public class GameService {
     }
 
     /**
-     * Evaluates the outcome of a round between two participants.
-     * Determines the loser via RoundEvaluator and distributes chips based on the winner's roll.
+     * Evaluates the outcome of a round for all given participants.
+     * Determines winner and loser via RoundEvaluator and distributes chips.
+     *
+     * INVARIANT: The order of participantIds must match the order in which
+     * participants rolled. This order is the sole basis for the LIFO/FIFO tie-breaker:
+     * the loser on a perfect tie is the LAST in the list; the winner is the FIRST.
+     *
+     * @param sessionId      The active game session.
+     * @param participantIds Ordered list of participant IDs (index 0 = rolled first).
      */
     @Transactional
-    public void evaluateRoundAndDistributeChips(UUID sessionId, UUID participant1Id, UUID participant2Id) {
-        // 1. Load the session once - this instance will be used to resolve participants
+    public void evaluateRoundAndDistributeChips(UUID sessionId, List<UUID> participantIds) {
+        // 1. Load the session once
         GameSession session = gameSessionRepository.findById(sessionId)
                 .orElseThrow(() -> new IllegalArgumentException("Session not found: " + sessionId));
 
-        // 2. Resolve participants directly from the loaded session's list to avoid redundant DB calls
-        GameParticipant p1 = session.getParticipants().stream()
-                .filter(p -> p.getId().equals(participant1Id))
-                .findFirst()
-                .orElseThrow(() -> new IllegalArgumentException("Participant 1 not found in session"));
+        // 2. Resolve participants in the EXACT order of participantIds (critical for tie-breaker)
+        List<GameParticipant> roundParticipants = participantIds.stream()
+                .map(id -> session.getParticipants().stream()
+                        .filter(p -> p.getId().equals(id))
+                        .findFirst()
+                        .orElseThrow(() -> new IllegalArgumentException("Participant not found: " + id)))
+                .toList();
 
-        GameParticipant p2 = session.getParticipants().stream()
-                .filter(p -> p.getId().equals(participant2Id))
-                .findFirst()
-                .orElseThrow(() -> new IllegalArgumentException("Participant 2 not found in session"));
-
-        // 3. Identify the loser using the RoundEvaluator (passing them as a list)
-        List<GameParticipant> roundParticipants = List.of(p1, p2);
-        GameParticipant loser = roundEvaluator.findLoser(roundParticipants);
-        GameParticipant winner = (loser == p1) ? p2 : p1;
+        // 3. Determine winner and loser via RoundEvaluator
+        GameParticipant loser  = roundEvaluator.findLoser(roundParticipants);
+        GameParticipant winner = roundEvaluator.findWinner(roundParticipants);
 
         // 4. The winner's roll determines the penalty value
         DiceRoll winningRoll = winner.getLastRoll();
         int penalty = winningRoll.getPenaltyValue();
 
         log.info("Evaluation for session {}: Winner {} (Roll: {}), Loser {}. Penalty: {} chips",
-                sessionId, winner.getPlayer().getName(), winningRoll, loser.getPlayer().getName(), penalty);
+                sessionId, winner.getPlayer().getName(), winningRoll,
+                loser.getPlayer().getName(), penalty);
 
         // 5. Handle chip distribution and half-time state transitions
         if (winningRoll.isShockOut()) {
             handleShockOut(session, loser);
-            // A Shock Out by the winner immediately ends the current half for the loser
             session.setPhase(GamePhase.SECOND_HALF);
         } else {
             distributeChips(session, winner, loser, penalty);
-
-            // If the central stack is now empty, transition to the next game phase
             if (session.getCentralStack() == 0) {
                 session.setPhase(GamePhase.SECOND_HALF);
             }
         }
 
-        // 6. Persist changes (Cascade will handle participants)
+        // 6. Persist changes (Cascade handles participants)
         gameSessionRepository.save(session);
     }
 
