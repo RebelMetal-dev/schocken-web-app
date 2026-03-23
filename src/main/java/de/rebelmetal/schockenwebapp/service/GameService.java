@@ -1,11 +1,7 @@
 package de.rebelmetal.schockenwebapp.service;
 
 import de.rebelmetal.schockenwebapp.exception.PlayerNotFoundException;
-import de.rebelmetal.schockenwebapp.model.DiceRoll;
-import de.rebelmetal.schockenwebapp.model.GameParticipant;
-import de.rebelmetal.schockenwebapp.model.GamePhase;
-import de.rebelmetal.schockenwebapp.model.GameSession;
-import de.rebelmetal.schockenwebapp.model.Player;
+import de.rebelmetal.schockenwebapp.model.*;
 import de.rebelmetal.schockenwebapp.repository.GameParticipantRepository;
 import de.rebelmetal.schockenwebapp.repository.GameSessionRepository;
 import de.rebelmetal.schockenwebapp.repository.PlayerRepository;
@@ -18,15 +14,10 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
-/**
- * Service orchestrating the game logic for Schocken sessions.
- */
 @Service
 @RequiredArgsConstructor
 @Slf4j
 public class GameService {
-
-    private static final int INITIAL_CENTRAL_STACK = 13;
 
     private final GameSessionRepository gameSessionRepository;
     private final GameParticipantRepository gameParticipantRepository;
@@ -34,192 +25,113 @@ public class GameService {
     private final DiceService diceService;
     private final RoundEvaluator roundEvaluator;
 
-    /**
-     * Creates a new game session with a list of players.
-     * Ensures all players exist and initializes the session state.
-     *
-     * @param playerIds List of UUIDs representing the players.
-     * @return The saved GameSession entity.
-     * @throws IllegalArgumentException if less than 2 players are provided.
-     * @throws PlayerNotFoundException if any ID does not match an existing player.
-     */
     @Transactional
     public GameSession createSession(List<UUID> playerIds) {
-        // 1. Validation: Schocken requires at least two participants
-        if (playerIds == null || playerIds.size() < 2) {
-            throw new IllegalArgumentException("A session must have at least 2 players!");
-        }
-
-        // 2. Initialize Session
         GameSession session = new GameSession();
         session.setId(UUID.randomUUID());
         session.setPhase(GamePhase.WAITING_FOR_PLAYERS);
-        session.setCentralStack(INITIAL_CENTRAL_STACK);
-        session.setParticipants(new ArrayList<>());
+        session.setCentralStack(13);
 
-        // 3. Fetch players in bulk to minimize database roundtrips
         List<Player> players = playerRepository.findAllById(playerIds);
+        if (players.size() != playerIds.size()) throw new PlayerNotFoundException("Some players not found.");
 
-        // 4. Integrity Check: Did we find everyone?
-        if (players.size() != playerIds.size()) {
-            throw new PlayerNotFoundException("Some player IDs were not found in the database.");
-        }
-
-        // 5. Create GameParticipants (the join-entity holding transient game state)
-        List<GameParticipant> participants = players.stream()
-                .map(player -> {
-                    GameParticipant p = new GameParticipant();
-                    p.setId(UUID.randomUUID());
-                    p.setPlayer(player);
-                    p.setSession(session);
-                    p.setPenaltyChips(0);
-                    p.setSafe(false);
-                    p.setBlind(false);
-                    return p;
-                })
-                .toList();
+        List<GameParticipant> participants = players.stream().map(player -> {
+            GameParticipant p = new GameParticipant();
+            p.setId(UUID.randomUUID());
+            p.setPlayer(player);
+            p.setSession(session);
+            p.setPenaltyChips(0);
+            return p;
+        }).toList();
 
         session.setParticipants(participants);
-
-        log.info("New GameSession created with ID: {} and {} players.", session.getId(), participants.size());
-
-        // 6. Persistence: Cascade will save participants automatically
         return gameSessionRepository.save(session);
     }
 
-    /**
-     * Performs a virtual (randomised) dice roll for a participant.
-     *
-     * @param sessionId     The active game session.
-     * @param participantId The participant who is rolling.
-     * @param hand          True if all three dice were thrown in a single attempt.
-     * @param throwCount    Number of throws used (1–3).
-     * @return The updated GameParticipant.
-     */
     @Transactional
-    public GameParticipant performVirtualRoll(UUID sessionId, UUID participantId,
-                                              boolean hand, int throwCount) {
-        GameParticipant participant = resolveParticipant(sessionId, participantId);
-        DiceRoll roll = diceService.rollVirtually(hand, throwCount);
-        participant.setLastRoll(roll);
-        participant.setThrowCount(throwCount);
-        gameParticipantRepository.save(participant);
-        log.info("Participant '{}' rolled virtually: {}", participant.getPlayer().getName(), roll);
-        return participant;
-    }
+    public List<GameParticipant> evaluateSetupAndDetermineOrder(UUID sessionId, List<UUID> participantIds) {
+        GameSession session = gameSessionRepository.findById(sessionId).orElseThrow();
 
-    /**
-     * Registers a manually entered dice roll for a participant.
-     *
-     * @param sessionId     The active game session.
-     * @param participantId The participant who is rolling.
-     * @param d1            Value of die 1.
-     * @param d2            Value of die 2.
-     * @param d3            Value of die 3.
-     * @param hand          True if all three dice were thrown in a single attempt.
-     * @param throwCount    Number of throws used (1–3).
-     * @return The updated GameParticipant.
-     */
-    @Transactional
-    public GameParticipant performManualRoll(UUID sessionId, UUID participantId,
-                                             int d1, int d2, int d3,
-                                             boolean hand, int throwCount) {
-        GameParticipant participant = resolveParticipant(sessionId, participantId);
-        DiceRoll roll = diceService.rollManually(d1, d2, d3, hand, throwCount);
-        participant.setLastRoll(roll);
-        participant.setThrowCount(throwCount);
-        gameParticipantRepository.save(participant);
-        log.info("Participant '{}' rolled manually: {}", participant.getPlayer().getName(), roll);
-        return participant;
-    }
-
-    /**
-     * Evaluates the outcome of a round for all given participants.
-     * Determines winner and loser via RoundEvaluator and distributes chips.
-     *
-     * INVARIANT: The order of participantIds must match the order in which
-     * participants rolled. This order is the sole basis for the LIFO/FIFO tie-breaker:
-     * the loser on a perfect tie is the LAST in the list; the winner is the FIRST.
-     *
-     * @param sessionId      The active game session.
-     * @param participantIds Ordered list of participant IDs (index 0 = rolled first).
-     */
-    @Transactional
-    public void evaluateRoundAndDistributeChips(UUID sessionId, List<UUID> participantIds) {
-        // 1. Load the session once
-        GameSession session = gameSessionRepository.findById(sessionId)
-                .orElseThrow(() -> new IllegalArgumentException("Session not found: " + sessionId));
-
-        // 2. Resolve participants in the EXACT order of participantIds (critical for tie-breaker)
-        List<GameParticipant> roundParticipants = participantIds.stream()
-                .map(id -> session.getParticipants().stream()
-                        .filter(p -> p.getId().equals(id))
-                        .findFirst()
-                        .orElseThrow(() -> new IllegalArgumentException("Participant not found: " + id)))
+        List<GameParticipant> setupRollers = participantIds.stream()
+                .map(id -> session.getParticipants().stream().filter(p -> p.getId().equals(id)).findFirst().orElseThrow())
                 .toList();
 
-        // 3. Determine winner and loser via RoundEvaluator
-        GameParticipant loser  = roundEvaluator.findLoser(roundParticipants);
-        GameParticipant winner = roundEvaluator.findWinner(roundParticipants);
+        List<GameParticipant> lowestRollers = roundEvaluator.findAllLowestRollers(setupRollers);
 
-        // 4. The winner's roll determines the penalty value
-        DiceRoll winningRoll = winner.getLastRoll();
-        int penalty = winningRoll.getPenaltyValue();
-
-        log.info("Evaluation for session {}: Winner {} (Roll: {}), Loser {}. Penalty: {} chips",
-                sessionId, winner.getPlayer().getName(), winningRoll,
-                loser.getPlayer().getName(), penalty);
-
-        // 5. Handle chip distribution and half-time state transitions
-        if (winningRoll.isShockOut()) {
-            handleShockOut(session, loser);
-            session.setPhase(GamePhase.SECOND_HALF);
+        if (lowestRollers.size() == 1) {
+            // Only one loser -> Setup finished
+            GameParticipant loser = lowestRollers.get(0);
+            reorderParticipantsStartingWith(session, loser);
+            session.setPhase(GamePhase.FIRST_HALF);
+            log.info("Setup complete. Loser: {}", loser.getPlayer().getName());
         } else {
-            distributeChips(session, winner, loser, penalty);
-            if (session.getCentralStack() == 0) {
-                session.setPhase(GamePhase.SECOND_HALF);
-            }
+            // Tie-break (Stechen) -> Clear rolls for tied participants only
+            log.info("Setup tie-break needed for {} players.", lowestRollers.size());
+            lowestRollers.forEach(p -> p.setLastRoll(null));
         }
 
-        // 6. Persist changes (Cascade handles participants)
+        gameSessionRepository.save(session);
+        return lowestRollers;
+    }
+
+    private void reorderParticipantsStartingWith(GameSession session, GameParticipant loser) {
+        List<GameParticipant> current = new ArrayList<>(session.getParticipants());
+        int loserIndex = current.indexOf(loser);
+        if (loserIndex == -1) return;
+
+        List<GameParticipant> newOrder = new ArrayList<>();
+        int size = current.size();
+        for (int i = 0; i < size; i++) {
+            newOrder.add(current.get((loserIndex + i) % size));
+        }
+        session.setParticipants(newOrder);
+    }
+
+    @Transactional
+    public void evaluateRoundAndDistributeChips(UUID sessionId, List<UUID> participantIds) {
+        GameSession session = gameSessionRepository.findById(sessionId).orElseThrow();
+        List<GameParticipant> rollers = participantIds.stream()
+                .map(id -> session.getParticipants().stream().filter(p -> p.getId().equals(id)).findFirst().orElseThrow())
+                .toList();
+
+        GameParticipant loser = roundEvaluator.findLoser(rollers);
+        GameParticipant winner = roundEvaluator.findWinner(rollers);
+        int penalty = roundEvaluator.calculatePenalty(winner.getLastRoll());
+
+        if (winner.getLastRoll().isShockOut()) {
+            handleShockOut(session, loser);
+        } else {
+            distributeChips(session, winner, loser, penalty);
+        }
+
+        if (session.getCentralStack() == 0) session.setPhase(GamePhase.SECOND_HALF);
         gameSessionRepository.save(session);
     }
 
-    private GameParticipant resolveParticipant(UUID sessionId, UUID participantId) {
-        GameSession session = gameSessionRepository.findById(sessionId)
-                .orElseThrow(() -> new IllegalArgumentException("Session not found: " + sessionId));
-        return session.getParticipants().stream()
-                .filter(p -> p.getId().equals(participantId))
-                .findFirst()
-                .orElseThrow(() -> new IllegalArgumentException("Participant not found: " + participantId));
-    }
-
     private void distributeChips(GameSession session, GameParticipant winner, GameParticipant loser, int amount) {
-        // Step A: Take chips from the central stack first
         int fromStack = Math.min(session.getCentralStack(), amount);
         session.setCentralStack(session.getCentralStack() - fromStack);
         loser.setPenaltyChips(loser.getPenaltyChips() + fromStack);
 
-        // Step B: If penalty is not satisfied, take from winner (Phase 2)
         int remaining = amount - fromStack;
-        if (remaining > 0) {
-            if (winner.getPenaltyChips() > 0) {
-                int stolen = Math.min(winner.getPenaltyChips(), remaining);
-                winner.setPenaltyChips(winner.getPenaltyChips() - stolen);
-                loser.setPenaltyChips(loser.getPenaltyChips() + stolen);
-                log.info("Phase 2: {} chips moved from winner to loser", stolen);
-            } else {
-                // Safety log for edge cases where no chips are available anywhere
-                log.warn("Penalty of {} chips could not be fully distributed. No chips left.", remaining);
-            }
+        if (remaining > 0 && session.getCentralStack() == 0) {
+            int stolen = Math.min(winner.getPenaltyChips(), remaining);
+            winner.setPenaltyChips(winner.getPenaltyChips() - stolen);
+            loser.setPenaltyChips(loser.getPenaltyChips() + stolen);
         }
     }
 
     private void handleShockOut(GameSession session, GameParticipant loser) {
-        // On Shock Out, the loser takes everything that's left in the middle
-        int remaining = session.getCentralStack();
-        loser.setPenaltyChips(loser.getPenaltyChips() + remaining);
+        loser.setPenaltyChips(loser.getPenaltyChips() + session.getCentralStack());
         session.setCentralStack(0);
-        log.info("SHOCK OUT! Loser {} takes all {} remaining chips.", loser.getPlayer().getName(), remaining);
+    }
+
+    @Transactional
+    public GameParticipant performManualRoll(UUID sessionId, UUID participantId, int d1, int d2, int d3, boolean hand, int count) {
+        GameSession session = gameSessionRepository.findById(sessionId).orElseThrow();
+        GameParticipant p = session.getParticipants().stream().filter(part -> part.getId().equals(participantId)).findFirst().orElseThrow();
+        p.setLastRoll(new DiceRoll(d1, d2, d3, hand, count));
+        p.setThrowCount(count);
+        return gameParticipantRepository.save(p);
     }
 }
