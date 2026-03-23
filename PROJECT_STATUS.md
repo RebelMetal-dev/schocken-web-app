@@ -41,10 +41,43 @@ A Spring Boot-based digitalization of the "Schocken" dice game, following Clean 
 * **`Player` entity fixed** — `@GeneratedValue(UUID)` added; `Player(String name)` constructor added to ensure correct JPA `persist()` lifecycle.
 * All 23 tests passing.
 
-## 5. Milestone 4: API & Web Interface (Planned ⏳)
-* **REST Controllers:** Exposing game actions to the frontend.
-* **DTO Mapping:** Ensuring internal entities are not leaked directly to the web.
-* **Error Handling:** Global exception handling for game rule violations.
+## 5. Milestone 4: Game Flow Completion (Planned ⏳)
+
+The service layer currently handles individual rounds but has no concept of a complete
+game arc. The following must be implemented in order before REST endpoints are meaningful:
+
+### 4a. Virtual Roll Storage
+* Add `performVirtualRoll(UUID sessionId, UUID participantId)` to `GameService`.
+* `DiceService.rollVirtually()` currently returns a `DiceRoll` object only — no service
+  method persists it to the DB. A virtual roll must be stored like a manual roll.
+
+### 4b. Round Reset
+* `GameParticipant.resetRoll()` exists but is never called automatically.
+* After each round evaluation, all participants must have their `lastRoll` and
+  `throwCount` cleared before the next round begins.
+
+### 4c. Half-Time Loss Tracking
+* `lostFirstHalf` and `lostSecondHalf` flags exist on `GameParticipant` but are never set.
+* `GameService` must set `lostFirstHalf = true` on the loser when `SECOND_HALF` is entered,
+  and `lostSecondHalf = true` on the loser at the end of the second half.
+
+### 4d. Round Completion Guard
+* No current check ensures all participants have rolled before `evaluateRoundAndDistributeChips`
+  is called. A precondition (`getLastRoll() != null` for all rollers) must be enforced
+  to prevent a silent NPE in `RoundEvaluator`. *(See Technical Debt, Section 6)*
+
+### 4e. FINAL_MATCH Logic
+* When a participant has `lostFirstHalf && lostSecondHalf` (`hasLostMatch() == true`),
+  they enter the final match.
+* Transition to `GamePhase.FINAL_MATCH` and determine the two finalists.
+
+### 4f. GAME_OVER Condition
+* After the final match, determine the ultimate loser and transition to `GAME_OVER`.
+
+### 4g. REST Controllers & DTO Mapping
+* Only build controllers after 4a–4f are complete and tested.
+* Expose game actions via REST; map internal entities to DTOs to avoid leaking domain objects.
+* Global exception handling for rule violations (e.g. rolling out of turn).
 
 ## 6. Technical Debt & Notes
 * *Note:* Ensure all future business logic remains in Services/Evaluators, not in Entities (SRP).
