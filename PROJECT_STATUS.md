@@ -11,13 +11,21 @@ A Spring Boot-based digitalization of the "Schocken" dice game, following Clean 
 
 ## 3. Milestone 2: Business Logic & Service Layer (Completed ✅)
 * **RoundEvaluator:** Implemented as a Strategy component. Determines the loser of a round via `findLoser(List<GameParticipant>)` based on `DiceRoll` comparisons (Schock-Rang > Hand-Bonus > LIFO).
+    * `findWinner(List<GameParticipant>)` — FIFO tie-break: earlier roller wins.
+    * `findAllLowestRollers(List<GameParticipant>)` — returns all tied lowest rollers for setup-phase tie detection.
+    * `calculatePenalty(DiceRoll)` — delegates to `DiceRoll.getPenaltyValue()` (DRY, single source of truth).
 * **DiceRoll — Penalty Logic (Completed ✅):**
     * `getPenaltyValue()` — translates dice result into penalty chip count.
     * `isShockOut()` — exposes half-time trigger without leaking the semantic constant 13.
     * 10 test cases verified via `@ParameterizedTest`.
+* **IntegerListConverter (Completed ✅):**
+    * `@AttributeConverter` mapping `List<Integer>` (dice values) to a CSV string column in the database.
 * **GameService (Completed ✅):**
     * Session creation with bulk player fetch and integrity check.
     * Virtual and manual roll registration via `DiceService`.
+    * `evaluateSetupAndDetermineOrder(UUID, List<UUID>)` — determines starting player order:
+        * Single loser → reorders participants starting with loser, transitions to `FIRST_HALF`.
+        * Tied losers → clears their rolls, transitions to `SETTING_UP_ORDER` (Stechen).
     * Round evaluation via `RoundEvaluator` — winner/loser determined internally (not passed from outside).
     * Chip distribution: Phase 1 (central stack) → Phase 2 (winner-to-loser).
     * Automatic `GamePhase.SECOND_HALF` transition on SHOCK_OUT or empty stack.

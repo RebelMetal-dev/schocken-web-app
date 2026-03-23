@@ -66,24 +66,57 @@ GameParticipant
 ### DiceRoll — Implementierte Methoden
 
 ```java
-public int getPenaltyValue()  // Strafsteine basierend auf RollType (exhaustiver switch)
-public boolean isShockOut()   // true wenn RollType == SHOCK_OUT (Halbzeit-Trigger)
-public RollType getType()     // Kategorisiert den Wurf: SHOCK_OUT, SHOCK, TRIPLET, STRAIGHT, HOUSE_NUMBER
+public int getPenaltyValue()         // Strafsteine basierend auf RollType (exhaustiver switch)
+public boolean isShockOut()          // true wenn RollType == SHOCK_OUT (Halbzeit-Trigger)
+public RollType getType()            // Kategorisiert den Wurf: SHOCK_OUT, SHOCK, TRIPLET, STRAIGHT, HOUSE_NUMBER
 public int compareTo(DiceRoll other) // Ranking: Typ > Hand > ThrowCount > Würfelwerte
+```
+
+### RoundEvaluator — Implementierte Methoden
+
+```java
+// Participant mit schlechtestem Wurf; LIFO-Tie-Break: späterer Roller verliert
+public GameParticipant findLoser(List<GameParticipant> participants)
+
+// Participant mit bestem Wurf; FIFO-Tie-Break: früherer Roller gewinnt
+public GameParticipant findWinner(List<GameParticipant> participants)
+
+// Alle Participants mit identisch schlechtestem Wurf — für Setup-Phase Tie-Erkennung
+public List<GameParticipant> findAllLowestRollers(List<GameParticipant> participants)
+
+// Delegiert an winnerRoll.getPenaltyValue(); liefert 0 bei null (DRY)
+public int calculatePenalty(DiceRoll winnerRoll)
 ```
 
 ---
 
-## 5. Technical Specs: GameService — Chip-Verteilungslogik
+## 5. Technical Specs: GameService — Ablauf
 
-### `evaluateRoundAndDistributeChips` — Ablauf
+### `evaluateSetupAndDetermineOrder` — Setup-Phase (Aufstellungsrunde)
+
+```
+Guard: Phase muss WAITING_FOR_PLAYERS oder SETTING_UP_ORDER sein
+1. Session laden (einmalig)
+2. setupRollers via .map(id -> ...) in Eingabe-Reihenfolge auflösen
+3. RoundEvaluator.findAllLowestRollers(setupRollers) → lowestRollers
+4a. Einzelner Verlierer:
+       → reorderParticipantsStartingWith(session, loser)  ← zyklische Rotation
+       → session.setPhase(FIRST_HALF)
+4b. Mehrere Verlierer (Gleichstand = Stechen):
+       → lowestRollers.forEach(p -> p.setLastRoll(null))  ← Rollen löschen
+       → session.setPhase(SETTING_UP_ORDER)
+5. gameSessionRepository.save(session)
+Rückgabe: lowestRollers (Liste der Stechen-Kandidaten oder Einzel-Verlierer)
+```
+
+### `evaluateRoundAndDistributeChips` — Chip-Verteilung
 
 ```
 1. Session laden (einmalig)
-2. p1, p2 direkt aus session.getParticipants() auflösen
-3. RoundEvaluator.findLoser(List.of(p1, p2)) → loser bestimmen
-4. winner = (loser == p1) ? p2 : p1
-5. penalty = winner.getLastRoll().getPenaltyValue()
+2. rollers via .map(id -> ...) in Eingabe-Reihenfolge auflösen
+3. RoundEvaluator.findLoser(rollers)  → loser
+4. RoundEvaluator.findWinner(rollers) → winner
+5. penalty = roundEvaluator.calculatePenalty(winner.getLastRoll())
 6. if (winner.getLastRoll().isShockOut())
        → handleShockOut: Loser nimmt alle verbleibenden Chips aus dem Stack
        → session.setPhase(SECOND_HALF)

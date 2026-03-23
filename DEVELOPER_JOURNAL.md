@@ -52,6 +52,16 @@ Vollständiges Protokoll: `journals/2026/03_March/2026-03-20_protocol.md`
 
 **Status:** Abgeschlossen — alle Tests GRÜN.
 
+### Setup-Phase & Persistenz-Fix — ABGESCHLOSSEN
+
+- `IntegerListConverter` als `@AttributeConverter` implementiert: `List<Integer>` (Würfelwerte) wird als CSV-String in der DB gespeichert — JPA-Pflicht für Listentypen.
+- `evaluateSetupAndDetermineOrder()` im GameService: Ermittelt den Startspieler vor der ersten Halbzeit.
+  - Einzelner Verlierer → Participants rotieren, Phase wechselt auf `FIRST_HALF`.
+  - Gleichstand → Rollen der Tied-Verlierer werden gelöscht, Phase wechselt auf `SETTING_UP_ORDER` (Stechen).
+- `findAllLowestRollers()` zum `RoundEvaluator` hinzugefügt — liefert alle Spieler mit identisch schlechtestem Wurf.
+- Guard in `evaluateSetupAndDetermineOrder()`: Nur in Phase `WAITING_FOR_PLAYERS` oder `SETTING_UP_ORDER` erlaubt.
+- `calculatePenalty()` auf Delegation refactored: entfernt duplizierte `switch`-Logik, delegiert jetzt ausschließlich an `DiceRoll.getPenaltyValue()` (DRY).
+
 Vollständiges Protokoll: `journals/2026/03_March/2026-03-23_protocol.md`
 
 ---
