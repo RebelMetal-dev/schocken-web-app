@@ -1,5 +1,6 @@
 package de.rebelmetal.schockenwebapp.model;
 
+import jakarta.persistence.Convert;
 import jakarta.persistence.Embeddable;
 import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
@@ -15,6 +16,7 @@ import java.util.stream.IntStream;
 @ToString
 public class DiceRoll implements Comparable<DiceRoll> {
 
+    @Convert(converter = IntegerListConverter.class)
     private final List<Integer> dice;
     private final boolean hand;
     private final int throwCount;
