@@ -1,6 +1,10 @@
 package de.rebelmetal.schockenwebapp.model;
 
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
+
 import static org.junit.jupiter.api.Assertions.*;
 
 class DiceRollTest {
@@ -63,5 +67,23 @@ class DiceRollTest {
         assertThrows(IllegalArgumentException.class, () -> {
             new DiceRoll(0, 4, 2);
         });
+    }
+    @ParameterizedTest(name = "Wurf {0},{1},{2} -> {3} Steine")
+    @CsvSource({
+            "1, 1, 1, 13",
+            "1, 1, 6, 6",
+            "1, 1, 2, 2",
+            "4, 4, 4, 3",
+            "3, 4, 5, 2",
+            "6, 5, 4, 2",
+            "2, 4, 6, 1",
+            "6, 6, 6, 3",  // Triplet 6 -> Muss 3 sein, nicht 6! (Wichtig!)
+            "1, 2, 3, 2",  // Niedrige Straße
+            "2, 3, 4, 2"   // Mittlere Straße
+    })
+    @DisplayName("Prüfung der Strafstein-Werte (Penalty Values)")
+    void shouldReturnCorrectPenaltyValues(int d1, int d2, int d3, int expectedPenalty) {
+        DiceRoll roll = new DiceRoll(d1, d2, d3);
+        assertEquals(expectedPenalty, roll.getPenaltyValue());
     }
 }

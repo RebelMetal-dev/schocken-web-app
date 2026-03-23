@@ -58,6 +58,27 @@ public class DiceRoll implements Comparable<DiceRoll> {
         return RollType.HOUSE_NUMBER;
     }
 
+    /**
+     * Calculates the penalty value (Strafsteine) for this roll.
+     * SHOCK_OUT = 13, SHOCK = high dice, TRIPLET = 3, STRAIGHT = 2, HOUSE_NUMBER = 1.
+     */
+    public int getPenaltyValue() {
+        return switch (getType()) {
+            case SHOCK_OUT -> 13;
+            case SHOCK -> dice.get(0); // Since sorted [x, 1, 1], x is the value
+            case TRIPLET -> 3;
+            case STRAIGHT -> 2;
+            case HOUSE_NUMBER -> 1;
+        };
+    }
+
+    /**
+     * Helper to check if this roll ends the half-time immediately.
+     */
+    public boolean isShockOut() {
+        return getType() == RollType.SHOCK_OUT;
+    }
+
     @Override
     public int compareTo(DiceRoll other) {
         // 1. Roll type rank (SHOCK_OUT > SHOCK > TRIPLET > STRAIGHT > HOUSE_NUMBER)
