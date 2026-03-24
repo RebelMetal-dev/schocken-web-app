@@ -94,17 +94,43 @@ A Spring Boot-based digitalization of the "Schocken" dice game, following Clean 
   verifiziert 201 + DTO-Struktur für `createSession` sowie `throwCount` und `safe`
   via `jsonPath` für `performRoll`. 26 Tests grün.
 
-## 8. Milestone 6: REST API Completion (Planned ⏳)
+## 8. Milestone 6: Web Frontend — Thymeleaf Dashboard (Completed ✅)
 
-### 6a. GET-Endpunkte
+* **Dependency:** `spring-boot-starter-thymeleaf` added to `build.gradle.kts`.
+* **`ViewController.java`** — `@Controller` (not `@RestController`) at `GET /`:
+  * Seeds Alice & Bob via `playerRepository.save()` for a stable demo state on every restart.
+  * Creates a `GameSession` and passes both `session` and `participants` explicitly to the `Model`.
+  * Returns `"index"` — Spring Boot maps this to `src/main/resources/templates/index.html`.
+* **`templates/index.html`** — Dark-themed Bootstrap 5 monitoring dashboard:
+  * Displays current `GamePhase`, `centralStack`, and `Session ID`.
+  * Iterates over participants with `th:each`, shows roll, throw count, penalty chips, and safe/active status.
+  * Empty-state fallback row via `${#lists.isEmpty(participants)}`.
+  * "Reset & Create New Session" button reloads the page, triggering fresh seeding.
+  * Live timestamp via Thymeleaf utility: `${#dates.format(#dates.createNow(), 'HH:mm:ss')}`.
+* **Application running** at `http://localhost:8080/` — first full Backend-to-Browser data flow verified.
+
+### Troubleshooting Lessons Learned
+* **Gradle Sync:** Changes in `build.gradle.kts` require clicking the "Load Gradle Changes"
+  icon (Blue Elephant in IntelliJ) to take effect. The IDE does not auto-detect them.
+* **Template Folder Convention:** Spring Boot auto-discovers templates **only** in
+  `src/main/resources/templates/` (lowercase). Any typo breaks the resolution silently.
+* **Template Return Value:** The string returned from a `@Controller` method must match
+  the filename exactly (without `.html`). `return "index"` → `templates/index.html`.
+* **Model vs Entity:** Passing `session.getParticipants()` as a separate model attribute
+  (`"participants"`) was necessary because Thymeleaf's `th:each` needs a direct list reference,
+  not a nested property traversal through the session object.
+
+## 9. Milestone 7: REST API Completion (Planned ⏳)
+
+### 7a. GET-Endpunkte
 * `GET /api/sessions/{id}` — aktuellen Session-Status abfragen.
 * Nötig damit das Frontend den Zustand zwischen Aktionen synchronisieren kann.
 
-### 6b. Controller-Test-Absicherung
+### 7b. Controller-Test-Absicherung
 * Fehlerfall-Tests für den `GameController`: falscher Phase-Zustand, fehlende Würfe,
   unbekannte IDs — verifiziert via `GlobalExceptionHandler` + `jsonPath("$.error")`.
 
-## 9. Technical Debt & Notes
+## 10. Technical Debt & Notes
 * *Note:* Ensure all future business logic remains in Services/Evaluators, not in Entities (SRP).
 * *Note:* Maintain 100% English naming convention for all new components.
 * *Note:* `@NoArgsConstructor(force = true)` on `DiceRoll` creates a JPA-only constructor with null dice — never call `new DiceRoll()` directly in production code.
