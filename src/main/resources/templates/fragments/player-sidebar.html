@@ -22,7 +22,7 @@
      id="player-sidebar"
      class="card p-3 rounded"
      hx-get="/game/sidebar-fragment"
-     hx-trigger="diceRolled from:body"
+     hx-trigger="diceRolled from:body, roundEvaluated from:body"
      hx-swap="outerHTML">
 
     <h5 class="text-warning mb-3">Players</h5>

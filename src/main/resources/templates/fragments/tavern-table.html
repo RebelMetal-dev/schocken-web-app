@@ -42,6 +42,19 @@
         </div>
     </div>
 
+    <!--
+        Round Result Banner — only visible after POST /game/evaluate returns.
+        Shows the loser and chips transferred. Disappears on the next roll swap
+        because roundResult is not set on POST /game/roll responses.
+    -->
+    <div th:if="${roundResult != null}"
+         class="alert mb-4"
+         th:classappend="${roundResult.gameOver} ? 'alert-danger' : 'alert-warning'">
+        <strong th:text="${roundResult.gameOver} ? '🏁 Game Over — ' : '💀 Round lost — '"></strong>
+        <span th:text="${roundResult.loserName}">Player</span>
+        <span th:text="' receives ' + ${roundResult.chipsTransferred} + ' chip(s).'"></span>
+    </div>
+
     <!-- Per-participant dice cards -->
     <h5 class="mb-3 text-warning">Active Rolls</h5>
     <div class="row g-3">
@@ -87,6 +100,26 @@
 
             </div>
         </div>
+    </div>
+
+    <!--
+        Evaluate Round button — visible only in FIRST_HALF, SECOND_HALF, FINAL_MATCH.
+        canEvaluate is computed in ViewController.populateModel() — no phase string
+        comparisons in the template.
+
+        hx-post          → POST /game/evaluate (no body params needed — server resolves
+                           participant IDs from the HttpSession-stored gameSessionId).
+        hx-target        → replaces the tavern-table with the updated fragment.
+        hx-swap=outerHTML → preserves the fragment id and hx-* attributes on every swap.
+    -->
+    <div th:if="${canEvaluate}" class="mt-4 d-flex justify-content-end">
+        <form hx-post="/game/evaluate"
+              hx-target="#tavern-table"
+              hx-swap="outerHTML">
+            <button type="submit" class="btn btn-danger">
+                Evaluate Round
+            </button>
+        </form>
     </div>
 
 </div>

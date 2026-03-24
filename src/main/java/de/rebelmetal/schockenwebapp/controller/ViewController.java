@@ -1,6 +1,8 @@
 package de.rebelmetal.schockenwebapp.controller;
 
+import de.rebelmetal.schockenwebapp.dto.RoundResultDTO;
 import de.rebelmetal.schockenwebapp.model.GameParticipant;
+import de.rebelmetal.schockenwebapp.model.GamePhase;
 import de.rebelmetal.schockenwebapp.model.GameSession;
 import de.rebelmetal.schockenwebapp.model.Player;
 import de.rebelmetal.schockenwebapp.repository.GameSessionRepository;
@@ -32,8 +34,9 @@ public class ViewController {
     private static final String FRAGMENT_TAVERN_TABLE   = "fragments/tavern-table :: tavern-table";
     private static final String FRAGMENT_PLAYER_SIDEBAR = "fragments/player-sidebar :: player-sidebar";
 
-    // HTMX server-sent event name — must exactly match the hx-trigger value in player-sidebar.html.
+    // HTMX server-sent event names — must exactly match hx-trigger values in fragment templates.
     private static final String EVENT_DICE_ROLLED    = "diceRolled";
+    private static final String EVENT_ROUND_EVALUATED = "roundEvaluated";
 
     // HTTP session attribute key for the active game session UUID.
     // Stored on initial load so all fragment endpoints can resolve the correct session.
@@ -85,6 +88,33 @@ public class ViewController {
     }
 
     /**
+     * Evaluates the current round and distributes chips.
+     * Participant IDs are resolved server-side from the active session —
+     * the client does not need to track or submit them.
+     * Returns the updated tavern-table fragment and broadcasts "roundEvaluated"
+     * so the sidebar self-refreshes with the new chip counts.
+     */
+    @PostMapping("/game/evaluate")
+    public String evaluate(Model model,
+                           HttpSession httpSession,
+                           HttpServletResponse response) {
+        UUID sessionId = (UUID) httpSession.getAttribute(SESSION_ATTR_GAME_ID);
+        GameSession session = gameSessionRepository.findById(sessionId).orElseThrow();
+
+        List<UUID> participantIds = session.getParticipants().stream()
+                .map(GameParticipant::getId).toList();
+
+        RoundResultDTO result = gameService.evaluateRoundAndDistributeChips(sessionId, participantIds);
+
+        // Re-fetch after evaluation: phase and centralStack have changed.
+        populateModel(model, gameSessionRepository.findById(sessionId).orElseThrow());
+        model.addAttribute("roundResult", result);
+
+        response.addHeader("HX-Trigger", EVENT_ROUND_EVALUATED);
+        return FRAGMENT_TAVERN_TABLE;
+    }
+
+    /**
      * Returns the tavern-table fragment on direct GET.
      * Allows the client to refresh the dice area independently of a roll action.
      */
@@ -115,6 +145,14 @@ public class ViewController {
     private void populateModel(Model model, GameSession session) {
         model.addAttribute("game", session);
         model.addAttribute("participants", toViewModels(session.getParticipants()));
+        // canEvaluate: semantic boolean — template decides button visibility, not CSS strings.
+        model.addAttribute("canEvaluate", isEvaluatablePhase(session.getPhase()));
+    }
+
+    private boolean isEvaluatablePhase(GamePhase phase) {
+        return phase == GamePhase.FIRST_HALF
+                || phase == GamePhase.SECOND_HALF
+                || phase == GamePhase.FINAL_MATCH;
     }
 
     private List<ParticipantViewModel> toViewModels(List<GameParticipant> participants) {

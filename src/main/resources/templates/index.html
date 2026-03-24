@@ -26,6 +26,15 @@
         <a href="/" class="btn btn-outline-warning btn-sm">New Session</a>
     </div>
 
+    <!--
+        Error Target: HTMX swaps the error-alert fragment into this zone
+        when GlobalExceptionHandler detects an HX-Request and returns a
+        ModelAndView instead of JSON. Kept above the main row so errors
+        are always visible regardless of which fragment triggered them.
+        Empty on initial load — only populated on error.
+    -->
+    <div id="error-target" class="mb-3"></div>
+
     <div class="row g-4">
         <!--
             Tavern Table (col-md-8):
