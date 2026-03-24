@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Schocken Dashboard - Live Status</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+    <style>
+        body { background-color: #121212; color: #e0e0e0; }
+        .card { background-color: #1e1e1e; border: 1px solid #333; }
+        .table { color: #e0e0e0; border-color: #444; }
+        .badge-shock { background-color: #ffc107; color: #000; }
+    </style>
+</head>
+<body class="p-5">
+
+<div class="container shadow-lg rounded p-4 card">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1 class="text-warning mb-0">Schocken Live Monitoring</h1>
+        <span class="badge bg-outline-secondary border text-secondary">v1.0 - Development</span>
+    </div>
+
+    <hr class="border-secondary">
+
+    <div class="row mb-4" th:if="${session != null}">
+        <div class="col-md-4">
+            <div class="p-3 border border-secondary rounded bg-dark">
+                <small class="text-muted d-block text-uppercase fw-bold">Current Phase</small>
+                <span class="fs-4 text-primary fw-bold" th:text="${session.phase}">WAITING</span>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="p-3 border border-secondary rounded bg-dark">
+                <small class="text-muted d-block text-uppercase fw-bold">Central Stack</small>
+                <span class="fs-4 text-info fw-bold" th:text="${session.centralStack + ' Chips'}">13 Chips</span>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="p-3 border border-secondary rounded bg-dark">
+                <small class="text-muted d-block text-uppercase fw-bold">Session ID</small>
+                <code class="text-secondary small" th:text="${session.id}">---</code>
+            </div>
+        </div>
+    </div>
+
+    <h3 class="mb-3">Active Participants</h3>
+    <table class="table table-dark table-hover align-middle">
+        <thead class="table-secondary text-dark">
+        <tr>
+            <th>Player Name</th>
+            <th>Last Dice Roll</th>
+            <th class="text-center">Throws</th>
+            <th class="text-center">Penalty Chips</th>
+            <th class="text-center">Status</th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr th:each="p : ${participants}">
+            <td class="fw-bold text-warning" th:text="${p.player.name}">Alice</td>
+            <td>
+                    <span th:if="${p.lastRoll != null}" class="font-monospace"
+                          th:text="${p.lastRoll.d1 + ',' + p.lastRoll.d2 + ',' + p.lastRoll.d3}">1,1,1</span>
+                <span th:if="${p.lastRoll == null}" class="text-muted italic small">No roll yet</span>
+            </td>
+            <td class="text-center" th:text="${p.throwCount}">0</td>
+            <td class="text-center">
+                <span class="badge rounded-pill bg-danger fs-6" th:text="${p.penaltyChips}">0</span>
+            </td>
+            <td class="text-center">
+                <span th:if="${p.safe}" class="badge bg-success px-3">SAFE</span>
+                <span th:if="${!p.safe}" class="badge bg-outline-warning border border-warning text-warning px-3">ACTIVE</span>
+            </td>
+        </tr>
+        <tr th:if="${#lists.isEmpty(participants)}">
+            <td colspan="5" class="text-center p-4 text-muted">
+                No participants found in this session.
+                Check if players were saved to the database.
+            </td>
+        </tr>
+        </tbody>
+    </table>
+
+    <div class="mt-4 d-flex gap-2">
+        <button class="btn btn-warning fw-bold px-4" onclick="location.reload()">
+            RESET & CREATE NEW SESSION
+        </button>
+        <a href="/h2-console" target="_blank" class="btn btn-outline-secondary">
+            Open H2 Database Console
+        </a>
+    </div>
+
+    <p class="mt-4 small text-muted">
+        System Node: <span class="text-secondary">Schocken-Web-App-Backend</span> |
+        Time: <span th:text="${#dates.format(#dates.createNow(), 'HH:mm:ss')}">00:00:00</span>
+    </p>
+</div>
+
+</body>
+</html>
