@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+
+<!--
+    Tavern Table Fragment — the main dice area for the active round.
+
+    HTMX contract:
+      - id="tavern-table" MUST stay on this root element.
+        Roll buttons below use hx-target="#tavern-table" + hx-swap="outerHTML",
+        which replaces the entire element. Since id and fragment name live here,
+        they are preserved on every swap automatically.
+
+    CSS contract:
+      - No CSS class names are computed in Java (ParticipantViewModel).
+        th:classappend and th:if decide visual state based on semantic booleans.
+-->
+<div th:fragment="tavern-table" id="tavern-table" class="card p-4 rounded">
+
+    <!-- Session status bar -->
+    <div class="row mb-4" th:if="${session != null}">
+        <div class="col-md-4">
+            <div class="p-3 border border-secondary rounded bg-dark">
+                <small class="text-muted d-block text-uppercase fw-bold">Phase</small>
+                <span class="fs-5 fw-bold text-primary" th:text="${session.phase}">WAITING</span>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="p-3 border border-secondary rounded bg-dark">
+                <small class="text-muted d-block text-uppercase fw-bold">Central Stack</small>
+                <!-- Elvis operator (?:) guards against a null result from the
+                     Thymeleaf expression engine before string concatenation. -->
+                <span class="fs-5 fw-bold text-info"
+                      th:text="${(session.centralStack ?: 0) + ' Chips'}">13 Chips</span>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="p-3 border border-secondary rounded bg-dark">
+                <small class="text-muted d-block text-uppercase fw-bold">Session ID</small>
+                <code class="text-secondary small" th:text="${session.id}">---</code>
+            </div>
+        </div>
+    </div>
+
+    <!-- Per-participant dice cards -->
+    <h5 class="mb-3 text-warning">Active Rolls</h5>
+    <div class="row g-3">
+        <div class="col-md-6" th:each="p : ${participants}">
+            <div class="p-3 bg-dark border border-secondary rounded">
+
+                <!-- Name + status badge: CSS class chosen by template, not ViewModel -->
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                    <span class="fw-bold text-warning" th:text="${p.displayName}">Player</span>
+                    <span class="badge px-3"
+                          th:classappend="${p.safe} ? 'bg-success' : 'border border-warning text-warning'"
+                          th:text="${p.safe} ? 'SAFE' : 'ACTIVE'">
+                    </span>
+                </div>
+
+                <!-- Dice result + throw counter -->
+                <div class="mb-2">
+                    <span class="font-monospace fs-5" th:text="${p.diceDisplay}">—</span>
+                    <small class="text-muted ms-2"
+                           th:text="'(' + ${p.throwCount} + ' throw(s))'"></small>
+                </div>
+
+                <!--
+                    Roll form (visible only when canRoll=true).
+                    hx-post           → calls POST /game/roll with participantId as form field.
+                    hx-target         → the element to replace (this fragment's root by ID).
+                    hx-swap=outerHTML → replaces the full #tavern-table element so the new
+                                        fragment's id and HTMX attributes are preserved.
+                -->
+                <form th:if="${p.canRoll}"
+                      hx-post="/game/roll"
+                      hx-target="#tavern-table"
+                      hx-swap="outerHTML">
+                    <input type="hidden" name="participantId" th:value="${p.id}">
+                    <button type="submit" class="btn btn-warning btn-sm w-100">
+                        Roll Dice
+                    </button>
+                </form>
+
+                <div th:if="${!p.canRoll}" class="text-muted small text-center pt-1">
+                    — roll complete —
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+</div>
+
+</body>
+</html>

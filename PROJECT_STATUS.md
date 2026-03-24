@@ -120,17 +120,58 @@ A Spring Boot-based digitalization of the "Schocken" dice game, following Clean 
   (`"participants"`) was necessary because Thymeleaf's `th:each` needs a direct list reference,
   not a nested property traversal through the session object.
 
-## 9. Milestone 7: REST API Completion (Planned ⏳)
+## 9. Milestone 7: HTMX Digital Tavern (Completed ✅)
 
-### 7a. GET-Endpunkte
-* `GET /api/sessions/{id}` — aktuellen Session-Status abfragen.
-* Nötig damit das Frontend den Zustand zwischen Aktionen synchronisieren kann.
+Architectural transition from a static Thymeleaf monitoring dashboard to an interactive
+"Digital Tavern" with partial page updates and zero full-page reloads.
 
-### 7b. Controller-Test-Absicherung
-* Fehlerfall-Tests für den `GameController`: falscher Phase-Zustand, fehlende Würfe,
-  unbekannte IDs — verifiziert via `GlobalExceptionHandler` + `jsonPath("$.error")`.
+### 7a. Fragment Architecture
+* `index.html` reduced to a **page shell** — includes two named fragments via `th:replace`.
+* `templates/fragments/tavern-table.html` — dice area. `id="tavern-table"` on root element.
+  Roll buttons use `hx-post="/game/roll"` + `hx-target="#tavern-table"` + `hx-swap="outerHTML"`.
+* `templates/fragments/player-sidebar.html` — stats panel. Self-refreshes via
+  `hx-trigger="diceRolled from:body"` + `hx-swap="outerHTML"` on the root element.
 
-## 10. Technical Debt & Notes
+### 7b. ParticipantViewModel
+* `ParticipantViewModel.java` introduced as a **view-layer record** — decouples templates
+  from JPA entities. Contains only semantic state (`boolean safe`, `boolean canRoll`).
+* No CSS strings in Java — `th:classappend` in the template decides visual styles.
+* `avatarUrl` and `skinId` fields reserved as hooks for future avatar/theming feature.
+
+### 7c. ViewController Refactored
+* Fragment name constants (`FRAGMENT_TAVERN_TABLE`, `FRAGMENT_PLAYER_SIDEBAR`) as
+  `private static final String` — single point of change if templates are renamed.
+* `HttpSession` stores the active `gameSessionId` — all fragment endpoints resolve
+  the session without requiring the client to track it.
+* `POST /game/roll` → performs virtual roll, returns `FRAGMENT_TAVERN_TABLE`,
+  sets `HX-Trigger: diceRolled` response header.
+* `GET /game/table-fragment` and `GET /game/sidebar-fragment` — direct fragment endpoints.
+
+### 7d. Sync Architecture: HX-Trigger over OOB
+* Chose **`HX-Trigger: diceRolled`** over `hx-swap-oob` for the sidebar update.
+  Reason: the sidebar self-refreshes as an independent observer — future events
+  (e.g. `roundEvaluated`) require no changes to POST endpoints.
+
+### 7e. JPA Entity Fix: `@Data` → `@Getter @Setter` on `GameSession`
+* `@Data` is an anti-pattern on JPA entities — its generated `equals()/hashCode()` over
+  all fields interferes with Hibernate's dirty checking.
+* Replaced with explicit `@Getter @Setter`. All three public getters (`getId()`,
+  `getPhase()`, `getCentralStack()`) are now guaranteed and visible to Thymeleaf.
+* `ViewController.index()` re-fetches the session via `findById()` after `createSession()`
+  to guarantee a clean, DB-backed entity (consistent with all other endpoints).
+
+## 10. Milestone 8: REST API Completion (Planned ⏳)
+
+### 8a. GET-Endpoints
+* `GET /api/sessions/{id}` — query current session state.
+* Required for frontend synchronisation between actions.
+
+### 8b. Controller Error-Case Tests
+* Error-path tests for `GameController`: wrong phase, missing rolls, unknown IDs —
+  verified via `GlobalExceptionHandler` + `jsonPath("$.error")`.
+
+## 11. Technical Debt & Notes
 * *Note:* Ensure all future business logic remains in Services/Evaluators, not in Entities (SRP).
 * *Note:* Maintain 100% English naming convention for all new components.
 * *Note:* `@NoArgsConstructor(force = true)` on `DiceRoll` creates a JPA-only constructor with null dice — never call `new DiceRoll()` directly in production code.
+* *Note:* `GameSession` now uses `@Getter @Setter` instead of `@Data`. Do NOT revert to `@Data` — this is an intentional architectural fix for JPA entity integrity.

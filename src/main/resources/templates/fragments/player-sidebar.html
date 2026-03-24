@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+
+<!--
+    Player Sidebar Fragment — persistent stats panel for all participants.
+
+    HTMX contract:
+      - id="player-sidebar" MUST stay on this root element.
+      - hx-trigger="diceRolled from:body": HTMX fires GET /game/sidebar-fragment
+        whenever the server broadcasts an "HX-Trigger: diceRolled" response header.
+        "from:body" means the event is caught at the document body level,
+        so any response — not just one targeting this element — can trigger the refresh.
+      - hx-swap="outerHTML": replaces the entire element, which re-attaches the
+        hx-trigger and hx-get attributes on every swap (they live in the template).
+
+    CSS contract:
+      - No CSS class names are computed in Java (ParticipantViewModel).
+        th:classappend decides the badge style based on the semantic boolean p.safe.
+-->
+<div th:fragment="player-sidebar"
+     id="player-sidebar"
+     class="card p-3 rounded"
+     hx-get="/game/sidebar-fragment"
+     hx-trigger="diceRolled from:body"
+     hx-swap="outerHTML">
+
+    <h5 class="text-warning mb-3">Players</h5>
+
+    <div class="d-flex flex-column gap-2">
+        <div th:each="p : ${participants}"
+             class="p-2 bg-dark border border-secondary rounded">
+
+            <!-- Name + status badge: CSS driven by template, not ViewModel -->
+            <div class="d-flex justify-content-between align-items-center">
+                <span class="fw-bold" th:text="${p.displayName}">Player</span>
+                <span class="badge px-2"
+                      th:classappend="${p.safe} ? 'bg-success' : 'border border-warning text-warning'"
+                      th:text="${p.safe} ? 'SAFE' : 'ACTIVE'">
+                </span>
+            </div>
+
+            <!-- Chip and throw counters -->
+            <div class="mt-1 d-flex gap-3">
+                <small class="text-danger fw-bold">
+                    <span th:text="${p.penaltyChips}">0</span> chips
+                </small>
+                <small class="text-muted">
+                    throws: <span th:text="${p.throwCount}">0</span>
+                </small>
+            </div>
+
+        </div>
+
+        <div th:if="${#lists.isEmpty(participants)}"
+             class="text-muted small text-center p-3">
+            No participants found.
+        </div>
+    </div>
+
+</div>
+
+</body>
+</html>
