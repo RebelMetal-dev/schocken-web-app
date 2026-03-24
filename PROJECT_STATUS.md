@@ -160,6 +160,17 @@ Architectural transition from a static Thymeleaf monitoring dashboard to an inte
 * `ViewController.index()` re-fetches the session via `findById()` after `createSession()`
   to guarantee a clean, DB-backed entity (consistent with all other endpoints).
 
+### 7f. Critical Bugfix: Thymeleaf Reserved Name Collision
+* **Root cause:** model attribute key `"session"` collides with Thymeleaf's built-in
+  `${session}` context variable, which points to the browser's `HttpSession` — not the
+  `GameSession` entity. All scalar field accesses (`phase`, `centralStack`, `id`) silently
+  resolved against `HttpSession`, returning null/empty. `participants` worked because it
+  used a non-reserved name.
+* **Fix:** renamed model attribute from `"session"` to `"game"` in `ViewController.populateModel()`.
+  All template expressions updated from `${session.*}` to `${game.*}`.
+* **Reserved Thymeleaf names to avoid as model keys:** `session`, `request`, `response`,
+  `application`, `param`.
+
 ## 10. Milestone 8: REST API Completion (Planned ⏳)
 
 ### 8a. GET-Endpoints
