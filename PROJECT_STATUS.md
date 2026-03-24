@@ -69,7 +69,22 @@ A Spring Boot-based digitalization of the "Schocken" dice game, following Clean 
   requires `FINAL_MATCH` or `GAME_OVER` phase.
 * All 23 tests passing after implementation.
 
-## 6. Milestone 5: REST API (Planned ⏳)
+## 6. Milestone 4b: Architecture Hardening (Completed ✅)
+
+* **`@OrderColumn(name = "seat_order")` on `GameSession.participants`** — Hibernate now writes
+  a numeric index column to `game_participant`. Participant list order survives every DB reload.
+  Without this, `participants.get(0)` was non-deterministic across transaction boundaries,
+  silently breaking LIFO/FIFO evaluation.
+
+* **`createSession` player load fixed** — `findAllById(playerIds)` replaced by a
+  `stream().map(findById).toList()`. Preserves caller-supplied `playerIds` order.
+  `findAllById` returns rows sorted by PK, not by input order.
+
+* **E2E test strengthened** — `assertThat(participants.get(0).getId()).isEqualTo(aliceId)`
+  reinstated as active proof that `reorderParticipantsStartingWith` persists correctly.
+  All 24 tests passing.
+
+## 7. Milestone 5: REST API (Planned ⏳)
 
 ### 5a. REST Controllers & DTO Mapping
 * Build controllers only now that 4a–4d are complete and tested.
