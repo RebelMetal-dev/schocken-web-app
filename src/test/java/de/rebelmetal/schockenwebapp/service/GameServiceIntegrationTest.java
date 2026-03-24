@@ -1,5 +1,6 @@
 package de.rebelmetal.schockenwebapp.service;
 
+import de.rebelmetal.schockenwebapp.dto.RoundResultDTO;
 import de.rebelmetal.schockenwebapp.model.*;
 import de.rebelmetal.schockenwebapp.repository.GameSessionRepository;
 import de.rebelmetal.schockenwebapp.repository.PlayerRepository;
@@ -114,6 +115,101 @@ class GameServiceIntegrationTest {
         // 4c: central stack reset to 13 for the second half
         assertThat(updatedSession.getCentralStack()).isEqualTo(13);
         assertThat(updatedSession.getPhase()).isEqualTo(GamePhase.SECOND_HALF);
+    }
+
+    @Test
+    void fullGameSimulation_threeShockOuts_coversAllPhaseTransitions() {
+
+        // Resolve participants by player name — independent of DB return order
+        UUID aliceId   = findByName(testSession, "Alice").getId();
+        UUID bobId     = findByName(testSession, "Bob").getId();
+        UUID charlieId = findByName(testSession, "Charlie").getId();
+
+        // ── SETUP PHASE ──────────────────────────────────────────────────────────
+        // Alice: HOUSE_NUMBER (worst) → loses setup
+        // Bob:   TRIPLET (best)
+        // Charlie: STRAIGHT (middle)
+        findById(testSession, aliceId).setLastRoll(new DiceRoll(6, 5, 3, false, 1));
+        findById(testSession, bobId).setLastRoll(new DiceRoll(4, 4, 4, false, 1));
+        findById(testSession, charlieId).setLastRoll(new DiceRoll(3, 4, 5, false, 1));
+        gameSessionRepository.save(testSession);
+
+        gameService.evaluateSetupAndDetermineOrder(
+                testSession.getId(),
+                List.of(aliceId, bobId, charlieId)
+        );
+
+        GameSession s = gameSessionRepository.findById(testSession.getId()).orElseThrow();
+        assertThat(s.getPhase()).isEqualTo(GamePhase.FIRST_HALF);
+        // Alice (loser) is now reliably first — @OrderColumn guarantees stable reload order
+        assertThat(s.getParticipants().get(0).getId()).isEqualTo(aliceId);
+
+        // ── ROUND 1: FIRST_HALF — Bob ShockOut, Alice loses ──────────────────────
+        findById(s, aliceId).setLastRoll(new DiceRoll(6, 5, 3, false, 1));   // HOUSE_NUMBER — loser
+        findById(s, bobId).setLastRoll(new DiceRoll(1, 1, 1, false, 1));     // SHOCK_OUT    — winner
+        findById(s, charlieId).setLastRoll(new DiceRoll(3, 3, 3, false, 1)); // TRIPLET      — safe
+        gameSessionRepository.save(s);
+
+        RoundResultDTO r1 = gameService.evaluateRoundAndDistributeChips(
+                testSession.getId(),
+                List.of(aliceId, bobId, charlieId)
+        );
+
+        s = gameSessionRepository.findById(testSession.getId()).orElseThrow();
+        assertThat(r1.loserName()).isEqualTo("Alice");
+        assertThat(r1.isGameOver()).isFalse();
+        assertThat(s.getPhase()).isEqualTo(GamePhase.SECOND_HALF);
+        assertThat(findById(s, aliceId).isLostFirstHalf()).isTrue();
+        assertThat(s.getParticipants()).allMatch(p -> p.getPenaltyChips() == 0);
+        assertThat(s.getCentralStack()).isEqualTo(13);
+
+        // ── ROUND 2: SECOND_HALF — Charlie ShockOut, Bob loses ───────────────────
+        findById(s, aliceId).setLastRoll(new DiceRoll(3, 3, 3, false, 1));   // TRIPLET      — safe
+        findById(s, bobId).setLastRoll(new DiceRoll(6, 5, 3, false, 1));     // HOUSE_NUMBER — loser
+        findById(s, charlieId).setLastRoll(new DiceRoll(1, 1, 1, false, 1)); // SHOCK_OUT    — winner
+        gameSessionRepository.save(s);
+
+        RoundResultDTO r2 = gameService.evaluateRoundAndDistributeChips(
+                testSession.getId(),
+                List.of(aliceId, bobId, charlieId)
+        );
+
+        s = gameSessionRepository.findById(testSession.getId()).orElseThrow();
+        assertThat(r2.loserName()).isEqualTo("Bob");
+        assertThat(r2.isGameOver()).isFalse();
+        assertThat(s.getPhase()).isEqualTo(GamePhase.FINAL_MATCH);
+        assertThat(findById(s, bobId).isLostSecondHalf()).isTrue();
+
+        List<GameParticipant> finalists = gameService.getOrderedFinalists(s);
+        assertThat(finalists).hasSize(2)
+                .allMatch(p -> p.isLostFirstHalf() || p.isLostSecondHalf());
+
+        // ── ROUND 3: FINAL_MATCH — Alice ShockOut, Bob loses → GAME_OVER ─────────
+        findById(s, aliceId).setLastRoll(new DiceRoll(1, 1, 1, false, 1)); // SHOCK_OUT    — winner
+        findById(s, bobId).setLastRoll(new DiceRoll(6, 5, 3, false, 1));   // HOUSE_NUMBER — loser
+        gameSessionRepository.save(s);
+
+        RoundResultDTO r3 = gameService.evaluateRoundAndDistributeChips(
+                testSession.getId(),
+                List.of(aliceId, bobId) // nur 2 Finalisten
+        );
+
+        s = gameSessionRepository.findById(testSession.getId()).orElseThrow();
+        assertThat(r3.loserName()).isEqualTo("Bob");
+        assertThat(r3.isGameOver()).isTrue();
+        assertThat(s.getPhase()).isEqualTo(GamePhase.GAME_OVER);
+    }
+
+    private GameParticipant findByName(GameSession session, String name) {
+        return session.getParticipants().stream()
+                .filter(p -> p.getPlayer().getName().equals(name))
+                .findFirst().orElseThrow();
+    }
+
+    private GameParticipant findById(GameSession session, UUID id) {
+        return session.getParticipants().stream()
+                .filter(p -> p.getId().equals(id))
+                .findFirst().orElseThrow();
     }
 
     @Test

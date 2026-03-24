@@ -36,8 +36,10 @@ public class GameService {
         session.setPhase(GamePhase.WAITING_FOR_PLAYERS);
         session.setCentralStack(13);
 
-        List<Player> players = playerRepository.findAllById(playerIds);
-        if (players.size() != playerIds.size()) throw new PlayerNotFoundException("Some players not found.");
+        List<Player> players = playerIds.stream()
+                .map(id -> playerRepository.findById(id)
+                        .orElseThrow(() -> new PlayerNotFoundException("Player not found: " + id)))
+                .toList();
 
         List<GameParticipant> participants = players.stream().map(player -> {
             GameParticipant p = new GameParticipant();
