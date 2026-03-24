@@ -30,11 +30,6 @@ A Spring Boot-based digitalization of the "Schocken" dice game, following Clean 
     * Chip distribution: Phase 1 (central stack) → Phase 2 (winner-to-loser).
     * Automatic `GamePhase.SECOND_HALF` transition on SHOCK_OUT or empty stack.
 
-## 4. Milestone 3: API & Web Interface (Planned ⏳)
-* **REST Controllers:** Exposing game actions to the frontend.
-* **DTO Mapping:** Ensuring internal entities are not leaked directly to the web.
-* **Error Handling:** Global exception handling for game rule violations.
-
 ## 4. Milestone 3: Testing & Stability (Completed ✅)
 * **`GameServiceIT`** — 4-player integration test: Shock 2 wins, House Number loses, 2 chips distributed from stack.
 * **`GameServiceIntegrationTest`** — 3-test suite covering setup tie-break (SETTING_UP_ORDER), Shock Out chip transfer, and Phase 2 winner-to-loser redistribution.
@@ -67,7 +62,7 @@ A Spring Boot-based digitalization of the "Schocken" dice game, following Clean 
   sets `GAME_OVER` when `centralStack == 0`.
 * `getOrderedFinalists(GameSession)` public method: returns participants with `lostFirstHalf || lostSecondHalf`;
   requires `FINAL_MATCH` or `GAME_OVER` phase.
-* All 23 tests passing after implementation.
+* All 24 tests passing after implementation.
 
 ## 6. Milestone 4b: Architecture Hardening (Completed ✅)
 
@@ -84,14 +79,32 @@ A Spring Boot-based digitalization of the "Schocken" dice game, following Clean 
   reinstated as active proof that `reorderParticipantsStartingWith` persists correctly.
   All 24 tests passing.
 
-## 7. Milestone 5: REST API (Planned ⏳)
+## 7. Milestone 5: REST API Basics (Completed ✅) — 26 Tests grün
 
-### 5a. REST Controllers & DTO Mapping
-* Build controllers only now that 4a–4d are complete and tested.
-* Expose game actions via REST; map internal entities to DTOs to avoid leaking domain objects.
-* Global exception handling for rule violations (e.g. rolling out of turn, wrong phase).
+* **`GameController` live** — 4 POST-Endpoints:
+  * `POST /api/sessions` → 201 + `GameSessionDTO`
+  * `POST /api/sessions/{id}/setup` → evaluates setup rolls, returns tied participants
+  * `POST /api/sessions/{id}/participants/{pid}/roll` → virtual roll, 200 + `ParticipantDTO`
+  * `POST /api/sessions/{id}/evaluate` → round evaluation, 200 + `RoundResultDTO`
+* **`ParticipantDTO` UI-ready** — enthält `throwCount` (max-3-throws-Enforcement im Frontend)
+  und `safe` (visuelle Hervorhebung sicherer Spieler).
+* **`GlobalExceptionHandler`** — wandelt `IllegalStateException`, `PlayerNotFoundException`
+  und `EntityNotFoundException` in strukturierte JSON-Fehlerantworten um.
+* **`GameControllerTest`** — `@WebMvcTest` mit `@MockitoBean` (kein deprecated `@MockBean`):
+  verifiziert 201 + DTO-Struktur für `createSession` sowie `throwCount` und `safe`
+  via `jsonPath` für `performRoll`. 26 Tests grün.
 
-## 7. Technical Debt & Notes
+## 8. Milestone 6: REST API Completion (Planned ⏳)
+
+### 6a. GET-Endpunkte
+* `GET /api/sessions/{id}` — aktuellen Session-Status abfragen.
+* Nötig damit das Frontend den Zustand zwischen Aktionen synchronisieren kann.
+
+### 6b. Controller-Test-Absicherung
+* Fehlerfall-Tests für den `GameController`: falscher Phase-Zustand, fehlende Würfe,
+  unbekannte IDs — verifiziert via `GlobalExceptionHandler` + `jsonPath("$.error")`.
+
+## 9. Technical Debt & Notes
 * *Note:* Ensure all future business logic remains in Services/Evaluators, not in Entities (SRP).
 * *Note:* Maintain 100% English naming convention for all new components.
 * *Note:* `@NoArgsConstructor(force = true)` on `DiceRoll` creates a JPA-only constructor with null dice — never call `new DiceRoll()` directly in production code.
