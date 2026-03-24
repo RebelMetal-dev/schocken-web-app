@@ -113,7 +113,7 @@ public class ViewController {
     }
 
     private void populateModel(Model model, GameSession session) {
-        model.addAttribute("session", session);
+        model.addAttribute("game", session);
         model.addAttribute("participants", toViewModels(session.getParticipants()));
     }
 
