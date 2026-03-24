@@ -7,6 +7,7 @@ import jakarta.persistence.Enumerated;
 import jakarta.persistence.Id;
 import jakarta.persistence.OneToMany;
 import jakarta.persistence.OrderColumn;
+import jakarta.persistence.Version;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -33,6 +34,13 @@ public class GameSession {
 
     @Id
     private UUID id;
+
+    // Optimistic locking: Hibernate increments this counter on every UPDATE.
+    // If two transactions read the same version and both try to write,
+    // the second commit throws OptimisticLockException — preventing lost updates
+    // on centralStack without holding a database row lock.
+    @Version
+    private Long version;
 
     // Default matches the value set by GameService.createSession() — keeps entity
     // and service in sync, and prevents a partially-constructed instance from

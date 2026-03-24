@@ -41,14 +41,18 @@ public class GameService {
                         .orElseThrow(() -> new PlayerNotFoundException("Player not found: " + id)))
                 .toList();
 
-        List<GameParticipant> participants = players.stream().map(player -> {
+        // new ArrayList<>() is required here — Stream.toList() returns an unmodifiable list.
+        // With @Version on GameSession, Hibernate's merge path calls replaceElements() on
+        // the participants collection, which calls clear() internally. An unmodifiable list
+        // throws UnsupportedOperationException at that point.
+        List<GameParticipant> participants = new ArrayList<>(players.stream().map(player -> {
             GameParticipant p = new GameParticipant();
             p.setId(UUID.randomUUID());
             p.setPlayer(player);
             p.setSession(session);
             p.setPenaltyChips(0);
             return p;
-        }).toList();
+        }).toList());
 
         session.setParticipants(participants);
         return gameSessionRepository.save(session);
@@ -246,6 +250,12 @@ public class GameService {
     private void handleShockOut(GameSession session, GameParticipant loser) {
         loser.setPenaltyChips(loser.getPenaltyChips() + session.getCentralStack());
         session.setCentralStack(0);
+    }
+
+    @Transactional(readOnly = true)
+    public GameSession getSession(UUID sessionId) {
+        return gameSessionRepository.findById(sessionId)
+                .orElseThrow(() -> new EntityNotFoundException("Session not found: " + sessionId));
     }
 
     @Transactional

@@ -35,6 +35,16 @@ public class GameController {
     }
 
     /**
+     * Returns the current state of an existing game session.
+     * GET /api/sessions/{sessionId}
+     */
+    @GetMapping("/{sessionId}")
+    public ResponseEntity<GameSessionDTO> getSession(@PathVariable UUID sessionId) {
+        GameSession session = gameService.getSession(sessionId);
+        return ResponseEntity.ok(toDTO(session));
+    }
+
+    /**
      * Evaluates all rolls in the setup phase and determines the starting order.
      * On a tie, returns the tied participants and transitions to SETTING_UP_ORDER.
      * POST /api/sessions/{sessionId}/setup

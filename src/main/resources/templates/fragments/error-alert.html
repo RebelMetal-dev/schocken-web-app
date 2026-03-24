@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+
+<!--
+    Error Alert Fragment — displayed when an exception is routed to an HTMX client.
+
+    HTMX contract:
+      - id="error-alert" MUST stay on this root element.
+        HTMX replaces the swap target with this element via outerHTML.
+      - The fragment has no hx-* attributes of its own — it is a passive display element.
+        The triggering form's hx-target determines where it lands in the DOM.
+
+    Model attributes:
+      - errorMessage (String): the exception message set by GlobalExceptionHandler.errorFragment().
+
+    CSS contract:
+      - Uses Bootstrap 5 alert-danger for semantic error styling.
+      - Dark border + bg-dark keep it consistent with the Tavern card style.
+-->
+<div th:fragment="error-alert"
+     id="error-alert"
+     class="card p-4 rounded border border-danger bg-dark">
+
+    <div class="d-flex align-items-center gap-3 mb-3">
+        <!-- Unicode dice icon — no external dependency, fits the tavern theme -->
+        <span class="fs-3 text-danger">&#9856;</span>
+        <h5 class="mb-0 text-danger fw-bold">Tavern Error</h5>
+    </div>
+
+    <div class="alert alert-danger mb-3" role="alert">
+        <span th:text="${errorMessage}">An unexpected error occurred.</span>
+    </div>
+
+    <!-- Reload button lets the player recover without a manual browser refresh -->
+    <a href="/" class="btn btn-outline-warning btn-sm">
+        Reset &amp; Return to Tavern
+    </a>
+
+</div>
+
+</body>
+</html>

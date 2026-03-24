@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import de.rebelmetal.schockenwebapp.dto.CreateSessionRequest;
 import de.rebelmetal.schockenwebapp.model.*;
 import de.rebelmetal.schockenwebapp.service.GameService;
+import jakarta.persistence.EntityNotFoundException;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
@@ -14,8 +15,10 @@ import org.springframework.test.web.servlet.MockMvc;
 import java.util.List;
 import java.util.UUID;
 
+import static org.hamcrest.Matchers.containsString;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
@@ -90,5 +93,60 @@ class GameControllerTest {
                 .andExpect(jsonPath("$.penaltyChips").value(3))
                 .andExpect(jsonPath("$.throwCount").value(1))
                 .andExpect(jsonPath("$.safe").value(false));
+    }
+
+    // --- GET /api/sessions/{id} ---
+
+    @Test
+    void getSession_existingId_returns200AndDTO() throws Exception {
+        UUID sessionId = UUID.randomUUID();
+
+        Player alice = new Player("Alice");
+        GameParticipant participant = new GameParticipant();
+        participant.setId(UUID.randomUUID());
+        participant.setPlayer(alice);
+        participant.setPenaltyChips(0);
+        participant.setThrowCount(0);
+        participant.setSafe(false);
+
+        GameSession session = new GameSession();
+        session.setId(sessionId);
+        session.setPhase(GamePhase.WAITING_FOR_PLAYERS);
+        session.setCentralStack(13);
+        session.setParticipants(List.of(participant));
+
+        when(gameService.getSession(sessionId)).thenReturn(session);
+
+        mockMvc.perform(get("/api/sessions/{id}", sessionId))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value(sessionId.toString()))
+                .andExpect(jsonPath("$.phase").value("WAITING_FOR_PLAYERS"))
+                .andExpect(jsonPath("$.centralStack").value(13));
+    }
+
+    @Test
+    void getSession_unknownId_restClient_returns404WithJsonError() throws Exception {
+        UUID unknownId = UUID.randomUUID();
+        when(gameService.getSession(unknownId))
+                .thenThrow(new EntityNotFoundException("Session not found: " + unknownId));
+
+        // REST client: no HX-Request header → GlobalExceptionHandler returns JSON body
+        mockMvc.perform(get("/api/sessions/{id}", unknownId))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.error").exists());
+    }
+
+    @Test
+    void getSession_unknownId_htmxClient_returnsErrorAlertFragment() throws Exception {
+        UUID unknownId = UUID.randomUUID();
+        when(gameService.getSession(unknownId))
+                .thenThrow(new EntityNotFoundException("Session not found: " + unknownId));
+
+        // HTMX client: HX-Request: true → GlobalExceptionHandler returns Thymeleaf fragment
+        // Status is 200 because HTMX swaps on 2xx; the error is communicated via rendered HTML.
+        mockMvc.perform(get("/api/sessions/{id}", unknownId)
+                        .header("HX-Request", "true"))
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString("Tavern Error")));
     }
 }
