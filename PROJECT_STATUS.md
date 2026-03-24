@@ -171,18 +171,67 @@ Architectural transition from a static Thymeleaf monitoring dashboard to an inte
 * **Reserved Thymeleaf names to avoid as model keys:** `session`, `request`, `response`,
   `application`, `param`.
 
-## 10. Milestone 8: REST API Completion (Planned ⏳)
+## 10. Milestone 8: Resilience, REST API & HTMX Error Handling (Completed ✅) — 29 Tests grün
 
-### 8a. GET-Endpoints
-* `GET /api/sessions/{id}` — query current session state.
-* Required for frontend synchronisation between actions.
+### 8a. Hybrid Error Handling via `@ControllerAdvice`
+* **Root problem:** `@RestControllerAdvice` forces `@ResponseBody` on every handler method —
+  making it impossible to return a Thymeleaf fragment. Replaced with `@ControllerAdvice`.
+* **Branching logic:** `isHtmxRequest(HttpServletRequest)` checks the `HX-Request: true` header.
+  * HTMX client → `ModelAndView("fragments/error-alert :: error-alert")` — fragment rendered by Thymeleaf.
+  * REST client → `ResponseEntity<Map>` with JSON body and correct HTTP status (404 / 400).
+* **Why `Object` return type:** Spring MVC dispatches based on actual runtime type —
+  `ModelAndView` → Thymeleaf pipeline, `ResponseEntity` → `HttpEntityMethodProcessor` → Jackson.
+* **`fragments/error-alert.html`** — Bootstrap dark-theme error card matching Tavern style.
+  Displays `${errorMessage}` from the `ModelAndView`; includes a "Reset & Return to Tavern" link.
 
-### 8b. Controller Error-Case Tests
-* Error-path tests for `GameController`: wrong phase, missing rolls, unknown IDs —
-  verified via `GlobalExceptionHandler` + `jsonPath("$.error")`.
+### 8b. `GET /api/sessions/{id}` Endpoint
+* `GameService.getSession(UUID)` — `@Transactional(readOnly = true)` for minimal DB overhead;
+  throws `EntityNotFoundException` if session not found.
+* `GameController.getSession()` — maps to `GameSessionDTO`, returns 200 or is handled by
+  `GlobalExceptionHandler` (404 JSON or error fragment depending on client type).
 
-## 11. Technical Debt & Notes
+### 8c. Optimistic Locking on `GameSession`
+* `@Version Long version` added to `GameSession` — Hibernate increments on every `UPDATE`.
+* Concurrent transactions reading the same `version` → second commit throws `OptimisticLockException`,
+  preventing lost updates on `centralStack`.
+* Chosen over pessimistic locking: Schocken is turn-based; true concurrent writes are exceptional,
+  not the norm. DB row locks would block all players unnecessarily.
+
+### 8d. Critical Bugfix: `Stream.toList()` + `@Version` Interaction
+* **Root cause:** `Stream.toList()` (Java 16+) returns an **unmodifiable** list.
+  Adding `@Version` changed Hibernate's internal merge path to `entityIsPersistent →
+  copyValues → replaceElements()`, which calls `collection.clear()` on the participants list.
+  An unmodifiable list throws `UnsupportedOperationException` at that point.
+* **Why it was hidden before:** Without `@Version`, Hibernate used a different merge path
+  that never called `replaceElements`. The fragility existed in the code, but was never triggered.
+* **Fix:** `session.setParticipants(new ArrayList<>(...))` in `createSession()` — wraps the
+  unmodifiable stream result in a mutable `ArrayList` before Hibernate ever touches it.
+* **Rule:** Any JPA-managed collection set via a service method must be a **mutable** list.
+  Never assign `List.of(...)` or `Stream.toList()` directly to a JPA entity field.
+
+### 8e. Test Coverage
+* Three new `@WebMvcTest` cases in `GameControllerTest`:
+  * `getSession_existingId` → 200 + DTO field assertions.
+  * `getSession_unknownId_restClient` → 404 + `jsonPath("$.error").exists()`.
+  * `getSession_unknownId_htmxClient` → 200 + `content().string(containsString("Tavern Error"))`.
+* All 29 tests passing.
+
+## 11. Milestone 9: Spielbarer Loop (Planned ⏳)
+
+### 9a. Error-Target in der UI
+* `index.html`: Add `<div id="error-target">` as a dedicated swap zone for error fragments.
+* `tavern-table.html`: Add `hx-target="#error-target"` fallback via `hx-on::response-error`
+  or use HTMX's `hx-swap` on the error response.
+
+### 9b. Evaluate-Button + ViewController
+* `POST /game/evaluate` in `ViewController` — calls `gameService.evaluateRoundAndDistributeChips()`,
+  returns updated `FRAGMENT_TAVERN_TABLE`, sets `HX-Trigger: roundEvaluated` header.
+* `player-sidebar.html`: listens for `roundEvaluated from:body` in addition to `diceRolled`.
+* Tavern table shows round result (loser name, chips transferred) before next roll begins.
+
+## 12. Technical Debt & Notes
 * *Note:* Ensure all future business logic remains in Services/Evaluators, not in Entities (SRP).
 * *Note:* Maintain 100% English naming convention for all new components.
 * *Note:* `@NoArgsConstructor(force = true)` on `DiceRoll` creates a JPA-only constructor with null dice — never call `new DiceRoll()` directly in production code.
 * *Note:* `GameSession` now uses `@Getter @Setter` instead of `@Data`. Do NOT revert to `@Data` — this is an intentional architectural fix for JPA entity integrity.
+* *Note:* Any list assigned to a JPA-managed `@OneToMany` field must be a **mutable** `ArrayList`. `Stream.toList()` and `List.of()` return unmodifiable lists — Hibernate's `replaceElements()` will throw `UnsupportedOperationException` during merge.
