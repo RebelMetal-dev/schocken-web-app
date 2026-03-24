@@ -121,6 +121,10 @@ public class GameService {
         GameSession session = gameSessionRepository.findById(sessionId)
                 .orElseThrow(() -> new EntityNotFoundException("Session not found: " + sessionId));
 
+        if (session.getPhase() == GamePhase.GAME_OVER) {
+            throw new IllegalStateException("Cannot evaluate: game is already over.");
+        }
+
         // map() preserves input order — critical for LIFO/FIFO tie-breaking
         List<GameParticipant> rollers = participantIds.stream()
                 .map(id -> session.getParticipants().stream()
@@ -143,35 +147,28 @@ public class GameService {
         Map<UUID, DiceRoll> rollsSnapshot = rollers.stream()
                 .collect(Collectors.toMap(GameParticipant::getId, GameParticipant::getLastRoll));
 
-        if (winner.getLastRoll().isShockOut()) {
-            handleShockOut(session, loser);
-        } else {
-            distributeChips(session, winner, loser, penalty);
-        }
-
-        // 4c — First half end: central stack emptied
-        // The loser of the round that emptied the stack is the first half loser.
-        if (session.getPhase() == GamePhase.FIRST_HALF && session.getCentralStack() == 0) {
-            loser.setLostFirstHalf(true);
-            log.info("First half over. {} lost.", loser.getPlayer().getName());
-            session.getParticipants().forEach(p -> p.setPenaltyChips(0));
-            session.setCentralStack(13);
-            session.setPhase(GamePhase.SECOND_HALF);
-        }
-
-        // 4c — Second half end: central stack emptied again
-        // Two if-blocks (not else-if): a ShockOut on a full stack could trigger both
-        // transitions in a single call — the centralStack reset to 13 prevents double-firing.
-        if (session.getPhase() == GamePhase.SECOND_HALF && session.getCentralStack() == 0) {
-            loser.setLostSecondHalf(true);
-            log.info("Second half over. {} lost.", loser.getPlayer().getName());
-            if (loser.hasLostMatch()) {
-                // Same player lost both halves — no final needed
-                session.setPhase(GamePhase.GAME_OVER);
-            } else {
-                // Two different losers — they play a final match
-                session.setPhase(GamePhase.FINAL_MATCH);
+        if (session.getPhase() == GamePhase.FINAL_MATCH) {
+            // 4d — Final match: exactly 2 finalists, loser of the round ends the game
+            if (rollers.size() != 2) {
+                throw new IllegalStateException(
+                        "FINAL_MATCH requires exactly 2 rollers, got: " + rollers.size());
             }
+            if (winner.getLastRoll().isShockOut()) {
+                handleShockOut(session, loser);
+            } else {
+                distributeChips(session, winner, loser, penalty);
+            }
+            if (session.getCentralStack() == 0) {
+                log.info("Final match over. {} lost the game.", loser.getPlayer().getName());
+                session.setPhase(GamePhase.GAME_OVER);
+            }
+        } else {
+            if (winner.getLastRoll().isShockOut()) {
+                handleShockOut(session, loser);
+            } else {
+                distributeChips(session, winner, loser, penalty);
+            }
+            handlePhaseTransitions(session, loser);
         }
 
         // 4b — Auto-reset all rolls for the next round
@@ -185,6 +182,20 @@ public class GameService {
                 rollsSnapshot,
                 session.getPhase() == GamePhase.GAME_OVER
         );
+    }
+
+    // 4d — Returns the two finalists in participant list order (first-half loser first if applicable).
+    // Only valid once FINAL_MATCH or GAME_OVER has been reached.
+    public List<GameParticipant> getOrderedFinalists(GameSession session) {
+        if (session.getPhase() != GamePhase.FINAL_MATCH
+                && session.getPhase() != GamePhase.GAME_OVER) {
+            throw new IllegalStateException(
+                    "getOrderedFinalists requires phase FINAL_MATCH or GAME_OVER, but was: "
+                    + session.getPhase());
+        }
+        return session.getParticipants().stream()
+                .filter(p -> p.isLostFirstHalf() || p.isLostSecondHalf())
+                .toList();
     }
 
     private void distributeChips(GameSession session, GameParticipant winner, GameParticipant loser, int amount) {
@@ -201,6 +212,31 @@ public class GameService {
                 log.warn("Chip deficit: {} chip(s) could not be distributed. " +
                          "Stack empty, winner '{}' has 0 chips. Total in play may be < 13.",
                         remaining - stolen, winner.getPlayer().getName());
+            }
+        }
+    }
+
+    // 4c — Phase transition logic after each chip distribution.
+    // Two if-blocks (not else-if): a ShockOut on a full stack could trigger both
+    // transitions in a single call — the centralStack reset to 13 prevents double-firing.
+    private void handlePhaseTransitions(GameSession session, GameParticipant loser) {
+        if (session.getPhase() == GamePhase.FIRST_HALF && session.getCentralStack() == 0) {
+            loser.setLostFirstHalf(true);
+            log.info("First half over. {} lost.", loser.getPlayer().getName());
+            session.getParticipants().forEach(p -> p.setPenaltyChips(0));
+            session.setCentralStack(13);
+            session.setPhase(GamePhase.SECOND_HALF);
+        }
+
+        if (session.getPhase() == GamePhase.SECOND_HALF && session.getCentralStack() == 0) {
+            loser.setLostSecondHalf(true);
+            log.info("Second half over. {} lost.", loser.getPlayer().getName());
+            if (loser.hasLostMatch()) {
+                // Same player lost both halves — no final needed
+                session.setPhase(GamePhase.GAME_OVER);
+            } else {
+                // Two different losers — they play a final match
+                session.setPhase(GamePhase.FINAL_MATCH);
             }
         }
     }

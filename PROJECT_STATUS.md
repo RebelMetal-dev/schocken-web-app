@@ -41,45 +41,42 @@ A Spring Boot-based digitalization of the "Schocken" dice game, following Clean 
 * **`Player` entity fixed** — `@GeneratedValue(UUID)` added; `Player(String name)` constructor added to ensure correct JPA `persist()` lifecycle.
 * All 23 tests passing.
 
-## 5. Milestone 4: Game Flow Completion (Planned ⏳)
+## 5. Milestone 4: Game Flow Completion (Completed ✅)
 
-The service layer currently handles individual rounds but has no concept of a complete
-game arc. The following must be implemented in order before REST endpoints are meaningful:
+### 4a. Virtual Roll Storage + Round Completion Guard *(Completed ✅)*
+* `performVirtualRoll(UUID sessionId, UUID participantId)` added to `GameService`.
+  Delegates to `DiceService.rollVirtually()`, derives `isHand` from `throwCount == 1`, persists via `gameParticipantRepository.save()`.
+* **4a.1 — Null-Guard:** `evaluateRoundAndDistributeChips` throws `IllegalStateException`
+  if any roller has `getLastRoll() == null`. *(Tech Debt resolved)*
 
-### 4a. Virtual Roll Storage + Round Completion Guard *(combined — Architect: Gemini)*
-* Add `performVirtualRoll(UUID sessionId, UUID participantId)` to `GameService`.
-* `DiceService.rollVirtually()` currently returns a `DiceRoll` object only — no service
-  method persists it to the DB. A virtual roll must be stored like a manual roll.
-* **4a.1 — Null-Guard (combined):** Add a precondition to `evaluateRoundAndDistributeChips`
-  that checks `getLastRoll() != null` for all rollers before evaluation begins. This is
-  implemented in the same step as virtual roll storage — testing 4a immediately surfaces
-  null-roll scenarios when not all players have rolled yet. *(Resolves Technical Debt, Section 6)*
+### 4b. Round Reset + RoundResultDTO *(Completed ✅)*
+* `rollers.forEach(GameParticipant::resetRoll)` called automatically after every round evaluation.
+* `RoundResultDTO` record introduced as immutable snapshot: `loserParticipantId`, `loserName`,
+  `chipsTransferred`, `allRolls` (captured **before** reset), `isGameOver`.
+* `evaluateRoundAndDistributeChips` return type changed `void` → `RoundResultDTO`.
 
-### 4b. Round Reset
-* `GameParticipant.resetRoll()` exists but is never called automatically.
-* After each round evaluation, all participants must have their `lastRoll` and
-  `throwCount` cleared before the next round begins.
+### 4c. Half-Time Loss Tracking *(Completed ✅)*
+* `handlePhaseTransitions(GameSession, GameParticipant loser)` private method:
+  * `FIRST_HALF` + `centralStack == 0` → `lostFirstHalf = true`, chips reset to 0, stack reset to 13, phase → `SECOND_HALF`.
+  * `SECOND_HALF` + `centralStack == 0` → `lostSecondHalf = true`; if `hasLostMatch()` → `GAME_OVER`, else → `FINAL_MATCH`.
+* Two `if`-blocks (not `else-if`) to handle ShockOut-on-full-stack edge case in a single transaction.
 
-### 4c. Half-Time Loss Tracking
-* `lostFirstHalf` and `lostSecondHalf` flags exist on `GameParticipant` but are never set.
-* `GameService` must set `lostFirstHalf = true` on the loser when `SECOND_HALF` is entered,
-  and `lostSecondHalf = true` on the loser at the end of the second half.
+### 4d. FINAL_MATCH Logic + GAME_OVER Condition *(Completed ✅)*
+* `evaluateRoundAndDistributeChips` guards against `GAME_OVER` at entry.
+* Dedicated `FINAL_MATCH` branch: enforces exactly 2 rollers, runs normal chip distribution,
+  sets `GAME_OVER` when `centralStack == 0`.
+* `getOrderedFinalists(GameSession)` public method: returns participants with `lostFirstHalf || lostSecondHalf`;
+  requires `FINAL_MATCH` or `GAME_OVER` phase.
+* All 23 tests passing after implementation.
 
-### 4d. FINAL_MATCH Logic
-* When a participant has `lostFirstHalf && lostSecondHalf` (`hasLostMatch() == true`),
-  they enter the final match.
-* Transition to `GamePhase.FINAL_MATCH` and determine the two finalists.
+## 6. Milestone 5: REST API (Planned ⏳)
 
-### 4e. GAME_OVER Condition
-* After the final match, determine the ultimate loser and transition to `GAME_OVER`.
-
-### 4f. REST Controllers & DTO Mapping
-* Only build controllers after 4a–4e are complete and tested.
+### 5a. REST Controllers & DTO Mapping
+* Build controllers only now that 4a–4d are complete and tested.
 * Expose game actions via REST; map internal entities to DTOs to avoid leaking domain objects.
-* Global exception handling for rule violations (e.g. rolling out of turn).
+* Global exception handling for rule violations (e.g. rolling out of turn, wrong phase).
 
-## 6. Technical Debt & Notes
+## 7. Technical Debt & Notes
 * *Note:* Ensure all future business logic remains in Services/Evaluators, not in Entities (SRP).
 * *Note:* Maintain 100% English naming convention for all new components.
 * *Note:* `@NoArgsConstructor(force = true)` on `DiceRoll` creates a JPA-only constructor with null dice — never call `new DiceRoll()` directly in production code.
-* *Tech Debt:* `RoundEvaluator` has no null-guard for `getLastRoll()`. Calling `evaluateRoundAndDistributeChips` before all participants have rolled causes a silent NPE. A precondition check (throw `IllegalStateException` if any roll is null) should be added before Phase 4 REST endpoints are exposed.
