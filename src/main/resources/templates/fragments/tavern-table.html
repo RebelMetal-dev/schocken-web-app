@@ -84,10 +84,18 @@
                     hx-swap=outerHTML → replaces the full #tavern-table element so the new
                                         fragment's id and HTMX attributes are preserved.
                 -->
+                <!--
+                    hx-swap="innerHTML": Thymeleaf returns the fragment's inner HTML
+                    (children only, without the outer wrapper div). innerHTML puts
+                    the response INSIDE the existing #tavern-table element, which
+                    preserves the id anchor in the DOM for all subsequent swaps.
+                    outerHTML would require the wrapper div to be in the response —
+                    which Thymeleaf does not include when rendering named fragments.
+                -->
                 <form th:if="${p.canRoll}"
                       hx-post="/game/roll"
                       hx-target="#tavern-table"
-                      hx-swap="outerHTML">
+                      hx-swap="innerHTML">
                     <input type="hidden" name="participantId" th:value="${p.id}">
                     <button type="submit" class="btn btn-warning btn-sm w-100">
                         Roll Dice
@@ -115,7 +123,7 @@
     <div th:if="${canEvaluate}" class="mt-4 d-flex justify-content-end">
         <form hx-post="/game/evaluate"
               hx-target="#tavern-table"
-              hx-swap="outerHTML">
+              hx-swap="innerHTML">
             <button type="submit" class="btn btn-danger">
                 Evaluate Round
             </button>

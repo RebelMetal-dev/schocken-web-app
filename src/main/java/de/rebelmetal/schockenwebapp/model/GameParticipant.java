@@ -9,8 +9,10 @@ import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import lombok.AllArgsConstructor;
-import lombok.Data;
+import lombok.EqualsAndHashCode;
+import lombok.Getter;
 import lombok.NoArgsConstructor;
+import lombok.Setter;
 
 import java.util.UUID;
 
@@ -19,13 +21,21 @@ import java.util.UUID;
  * Stores the transient state of a player within a specific game.
  * This ensures the core Player entity remains clean and reusable.
  */
-@Data
+// @Data is an anti-pattern on JPA entities — its generated equals()/hashCode()
+// covers all fields, causing Hibernate dirty-check issues when field values change
+// (e.g. lastRoll changes from null to a DiceRoll after performVirtualRoll).
+// @EqualsAndHashCode(onlyExplicitlyIncluded = true) restricts comparison to @Id only:
+// two participants are equal if and only if they share the same database identity.
+@Getter
+@Setter
+@EqualsAndHashCode(onlyExplicitlyIncluded = true)
 @AllArgsConstructor
 @NoArgsConstructor
 @Entity
 public class GameParticipant {
 
     @Id
+    @EqualsAndHashCode.Include
     private UUID id;
 
     @ManyToOne(optional = false)
