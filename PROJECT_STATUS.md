@@ -216,18 +216,48 @@ Architectural transition from a static Thymeleaf monitoring dashboard to an inte
   * `getSession_unknownId_htmxClient` → 200 + `content().string(containsString("Tavern Error"))`.
 * All 29 tests passing.
 
-## 11. Milestone 9: Spielbarer Loop (Planned ⏳)
+## 11. Milestone 9: Spielbarer Loop (Completed ✅) — 29 Tests grün
 
 ### 9a. Error-Target in der UI
-* `index.html`: Add `<div id="error-target">` as a dedicated swap zone for error fragments.
-* `tavern-table.html`: Add `hx-target="#error-target"` fallback via `hx-on::response-error`
-  or use HTMX's `hx-swap` on the error response.
+* `index.html`: `<div id="error-target" class="mb-3"></div>` added above the main row as
+  a dedicated swap zone for HTMX error fragments returned by `GlobalExceptionHandler`.
 
 ### 9b. Evaluate-Button + ViewController
-* `POST /game/evaluate` in `ViewController` — calls `gameService.evaluateRoundAndDistributeChips()`,
-  returns updated `FRAGMENT_TAVERN_TABLE`, sets `HX-Trigger: roundEvaluated` header.
-* `player-sidebar.html`: listens for `roundEvaluated from:body` in addition to `diceRolled`.
-* Tavern table shows round result (loser name, chips transferred) before next roll begins.
+* `POST /game/evaluate` in `ViewController` — resolves participant IDs server-side from
+  `HttpSession`, calls `gameService.evaluateRoundAndDistributeChips()`, returns updated
+  `FRAGMENT_TAVERN_TABLE`, sets `HX-Trigger: roundEvaluated` response header.
+* `canEvaluate` semantic boolean added to `populateModel()` — `true` for phases
+  `FIRST_HALF`, `SECOND_HALF`, `FINAL_MATCH`. Template decides button visibility — no phase
+  strings in HTML.
+* Round Result Banner in `tavern-table.html` — shows loser name, chips transferred, and
+  game-over status when `roundResult != null`. Disappears automatically on next roll swap.
+* `player-sidebar.html`: `hx-trigger` extended with `roundEvaluated from:body` — sidebar
+  self-refreshes on both dice rolls and round evaluations without OOB coupling.
+* `hx-swap="outerHTML"` confirmed as the correct swap strategy on all forms — Thymeleaf
+  returns the full fragment wrapper div including `id="tavern-table"` when rendering named
+  fragments. `innerHTML` caused double-nesting (confirmed via DevTools Inspector).
+
+### 9c. GameParticipant `@Data` Fix
+* `@Data` replaced with `@Getter @Setter @EqualsAndHashCode(onlyExplicitlyIncluded = true)`
+  + `@EqualsAndHashCode.Include` on `@Id UUID id`.
+* Root cause: `@Data` generates `equals()/hashCode()` over all fields — when `lastRoll`
+  changes from `null` to a `DiceRoll`, the object's hash changes mid-session, causing
+  Hibernate dirty-check instability.
+* Fix: ID-only equality — two participants are equal if and only if they share the same
+  database identity (`UUID id`).
+
+### 9d. HTMX Deep Debug: App confirmed working
+* Symptom: clicking "Roll Dice" appeared to do nothing in the browser.
+* Investigation via Firefox DevTools + `htmx.logAll()`:
+  * `HX-Request: true` in request headers → HTMX intercepting correctly ✅
+  * `Content-Type: text/html`, `HX-Trigger: diceRolled` in response headers ✅
+  * Response body starts with `<div id="tavern-table">` → correct fragment returned ✅
+  * Console log showed `htmx:beforeSwap` + `htmx:beforeCleanupElement` for every child
+    element → HTMX WAS performing the outerHTML swap correctly ✅
+  * Actual response data: Alice `6, 5, 4` (5 throws), Bob `6, 5, 1` (1 throw) → data
+    persisting correctly, throwCount accumulating across multiple rolls ✅
+* Root conclusion: the app was working all along. The dice display changes are visually
+  subtle (small `font-monospace` span). Visual feedback enhancement planned as Milestone 10.
 
 ## 12. Technical Debt & Notes
 * *Note:* Ensure all future business logic remains in Services/Evaluators, not in Entities (SRP).
