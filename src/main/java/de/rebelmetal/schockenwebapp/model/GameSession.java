@@ -57,6 +57,20 @@ public class GameSession {
     private int centralStack = 13;
 
     /**
+     * Maximum number of rolls allowed per player this round (SCHOCKEN_RULES.md §2a).
+     * Set by the Beginner at the start of each round.
+     * Default 0 = not yet set; GameService must block rolling until explicitly assigned.
+     */
+    private int rollLimit = 0;
+
+    /**
+     * Index into the participants list pointing to the player whose turn it currently is.
+     * Advanced by GameService using modulo: (activeParticipantIndex + 1) % participants.size().
+     * Reset to 0 at the start of each new round.
+     */
+    private int activeParticipantIndex = 0;
+
+    /**
      * List of participants currently involved in this session.
      */
     @OneToMany(mappedBy = "session", cascade = CascadeType.ALL, orphanRemoval = true)

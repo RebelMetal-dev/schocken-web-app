@@ -62,6 +62,14 @@ public class GameParticipant {
     private boolean blind;
 
     /**
+     * True once the player has physically revealed their cup ("Lupfen") (SCHOCKEN_RULES.md §3.2).
+     * Distinct from blind: a player can choose to play blind but still have their cup
+     * revealed during the sequential showdown.
+     * Reset to false at the start of each new round via resetRoll().
+     */
+    private boolean cupRevealed = false;
+
+    /**
      * The last dice roll performed in the current turn.
      */
     @Embedded
@@ -94,5 +102,6 @@ public class GameParticipant {
     public void resetRoll() {
         this.lastRoll = null;
         this.throwCount = 0;
+        this.cupRevealed = false;
     }
 }
