@@ -62,7 +62,7 @@ public class GameParticipant {
     private boolean blind;
 
     /**
-     * True once the player has physically revealed their cup ("Lupfen") (SCHOCKEN_RULES.md §3.2).
+     * True once the player has physically revealed their cup (SCHOCKEN_RULES.md §3.2).
      * Distinct from blind: a player can choose to play blind but still have their cup
      * revealed during the sequential showdown.
      * Reset to false at the start of each new round via resetRoll().

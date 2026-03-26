@@ -82,7 +82,7 @@ public class GameService {
             session.setPhase(GamePhase.FIRST_HALF);
             log.info("Setup complete. Loser: {}", loser.getPlayer().getName());
         } else {
-            // Tie-break (Stechen) -> transition to SETTING_UP_ORDER, clear rolls for tied participants
+            // Tie-break -> transition to SETTING_UP_ORDER, clear rolls for tied participants
             session.setPhase(GamePhase.SETTING_UP_ORDER);
             log.info("Setup tie-break needed for {} players.", lowestRollers.size());
             lowestRollers.forEach(p -> p.setLastRoll(null));
@@ -178,7 +178,7 @@ public class GameService {
         // Must happen BEFORE resetRoundState(), which clears cupRevealed for the next round.
         rollers.forEach(p -> p.setCupRevealed(true));
 
-        // Pitter rule: the round loser becomes the Beginner (starter) of the next round.
+        // Loser-to-starter rule: the round loser becomes the starter of the next round.
         // activeParticipantIndex is set directly to the loser's position — not incremented via modulo.
         // Skipped when the game is over — no next round to prepare (SCHOCKEN_RULES.md §2c).
         boolean gameOver = session.getPhase() == GamePhase.GAME_OVER;
@@ -263,7 +263,7 @@ public class GameService {
 
     // Clears all per-round state to prepare for the next round.
     // Participant state (lastRoll, throwCount, cupRevealed) is reset via resetRoll().
-    // Session rollLimit is cleared so the next Beginner (starter) sets a new limit.
+    // Session rollLimit is cleared so the next starter (starter) sets a new limit.
     private void resetRoundState(GameSession session, List<GameParticipant> participants) {
         participants.forEach(GameParticipant::resetRoll);
         session.setRollLimit(0);
@@ -290,8 +290,8 @@ public class GameService {
         }
 
         // 2. Limit guard (SCHOCKEN_RULES.md §2a).
-        // rollLimit == 0 means the Beginner has not finished their turn yet (setup/initial roll phase).
-        // In that state no limit is enforced, so the Beginner may roll up to 3 times freely.
+        // rollLimit == 0 means the starter has not finished their turn yet (setup/initial roll phase).
+        // In that state no limit is enforced, so the starter may roll up to 3 times freely.
         if (session.getRollLimit() > 0 && participant.getThrowCount() >= session.getRollLimit()) {
             throw new IllegalStateException(
                     "Roll limit of " + session.getRollLimit() + " reached for "
@@ -305,7 +305,7 @@ public class GameService {
     }
 
     // Called when the active player voluntarily stops rolling (or has no rolls left).
-    // Fixates rollLimit on the Beginner's first finishTurn, then advances the turn pointer.
+    // Fixates rollLimit on the starter's first finishTurn, then advances the turn pointer.
     @Transactional
     public GameSession finishTurn(UUID sessionId, UUID participantId) {
         GameSession session = gameSessionRepository.findById(sessionId)
@@ -323,11 +323,11 @@ public class GameService {
                     "It is not " + p.getPlayer().getName() + "'s turn to finish.");
         }
 
-        // Fixate rollLimit: Beginner's throwCount becomes the limit for all other players.
+        // Fixate rollLimit: starter's throwCount becomes the limit for all other players.
         // Causally must happen before the index is advanced (SCHOCKEN_RULES.md §2a).
         if (session.getRollLimit() == 0) {
             session.setRollLimit(p.getThrowCount());
-            log.info("Roll limit set to {} by Beginner {}.", p.getThrowCount(), p.getPlayer().getName());
+            log.info("Roll limit set to {} by starter {}.", p.getThrowCount(), p.getPlayer().getName());
         }
 
         // Advance turn pointer using modulo to wrap around the participant list
@@ -337,7 +337,7 @@ public class GameService {
         return gameSessionRepository.save(session);
     }
 
-    // Called when a player clicks the "Lupfen" (reveal cup) button (SCHOCKEN_RULES.md §3.2).
+    // Called when a player clicks the reveal cup button (SCHOCKEN_RULES.md §3.2).
     // Idempotent: revealing an already-revealed cup is a no-op.
     // Blind-Zwang violation: if the player reached the roll limit and reveals anyway,
     // they receive 1 penalty chip immediately and the cup stays revealed.

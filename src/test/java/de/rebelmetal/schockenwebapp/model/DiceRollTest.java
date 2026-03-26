@@ -68,7 +68,7 @@ class DiceRollTest {
             new DiceRoll(0, 4, 2);
         });
     }
-    @ParameterizedTest(name = "Wurf {0},{1},{2} -> {3} Steine")
+    @ParameterizedTest(name = "Roll {0},{1},{2} -> {3} penalty chips")
     @CsvSource({
             "1, 1, 1, 13",
             "1, 1, 6, 6",
@@ -77,11 +77,11 @@ class DiceRollTest {
             "3, 4, 5, 2",
             "6, 5, 4, 2",
             "2, 4, 6, 1",
-            "6, 6, 6, 3",  // Triplet 6 -> Muss 3 sein, nicht 6! (Wichtig!)
-            "1, 2, 3, 2",  // Niedrige Straße
-            "2, 3, 4, 2"   // Mittlere Straße
+            "6, 6, 6, 3",  // Triplet 6 -> must be 3, not 6 (penalty is fixed at 3 for any triplet)
+            "1, 2, 3, 2",  // Low straight
+            "2, 3, 4, 2"   // Mid straight
     })
-    @DisplayName("Prüfung der Strafstein-Werte (Penalty Values)")
+    @DisplayName("Penalty chip values per roll type")
     void shouldReturnCorrectPenaltyValues(int d1, int d2, int d3, int expectedPenalty) {
         DiceRoll roll = new DiceRoll(d1, d2, d3);
         assertEquals(expectedPenalty, roll.getPenaltyValue());

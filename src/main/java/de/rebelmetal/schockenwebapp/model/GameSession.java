@@ -58,7 +58,7 @@ public class GameSession {
 
     /**
      * Maximum number of rolls allowed per player this round (SCHOCKEN_RULES.md §2a).
-     * Set by the Beginner at the start of each round.
+     * Set by the starter (initial player) at the start of each round.
      * Default 0 = not yet set; GameService must block rolling until explicitly assigned.
      */
     private int rollLimit = 0;

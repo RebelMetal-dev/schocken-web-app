@@ -51,7 +51,7 @@ class GameServiceIntegrationTest {
 
     @Test
     void evaluateSetupAndDetermineOrder_withTieBreak_transitionsToSettingUpOrderAndClearsRolls() {
-        // Given: player1 and player2 have the WORST (identical) roll → Stechen (tie-break)
+        // Given: player1 and player2 have the WORST (identical) roll → tie-break required
         //        player3 has the best roll → not involved in the tie-break
         player1.setLastRoll(new DiceRoll(6, 5, 3, false, 1)); // HOUSE_NUMBER — worst (6=5+1, but 5≠3+1)
         player2.setLastRoll(new DiceRoll(6, 5, 3, false, 1)); // HOUSE_NUMBER — equally worst (Tie!)
@@ -65,7 +65,7 @@ class GameServiceIntegrationTest {
                 List.of(player1.getId(), player2.getId(), player3.getId())
         );
 
-        // Then: Stechen → phase stays SETTING_UP_ORDER
+        // Then: tie-break required → phase stays SETTING_UP_ORDER
         GameSession updatedSession = gameSessionRepository.findById(testSession.getId()).orElseThrow();
         assertThat(updatedSession.getPhase()).isEqualTo(GamePhase.SETTING_UP_ORDER);
 
