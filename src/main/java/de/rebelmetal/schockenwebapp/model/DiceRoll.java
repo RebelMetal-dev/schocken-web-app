@@ -66,21 +66,20 @@ public class DiceRoll implements Comparable<DiceRoll> {
     public int compareTo(DiceRoll other) {
         if (other == null) return 1;
 
-        // 1. Rank (Enum)
+        // 1. Rank: higher rank wins (lower enum ordinal = better roll)
         int rankCompare = Integer.compare(this.getType().rank, other.getType().rank);
         if (rankCompare != 0) return rankCompare;
 
-        // 2. Hand beats combined
-        int handCompare = Boolean.compare(this.hand, other.hand);
-        if (handCompare != 0) return handCompare;
-
-        // 3. Throw count (Fewer is better -> reverse comparison)
-        int throwCompare = Integer.compare(other.getThrowCount(), this.getThrowCount());
-        if (throwCompare != 0) return throwCompare;
-
-        // 4. Numerical value (e.g., 654 vs 642)
-        int myVal = this.dice.get(0) * 100 + this.dice.get(1) * 10 + this.dice.get(2);
+        // 2. Numerical value within the same rank (e.g. Schock 6 > Schock 4)
+        // Dice are sorted descending, so a simple positional comparison is sufficient.
+        int myVal    = this.dice.get(0)  * 100 + this.dice.get(1)  * 10 + this.dice.get(2);
         int otherVal = other.dice.get(0) * 100 + other.dice.get(1) * 10 + other.dice.get(2);
-        return Integer.compare(myVal, otherVal);
+        int valCompare = Integer.compare(myVal, otherVal);
+        if (valCompare != 0) return valCompare;
+
+        // 3. Hand beats combined — only decisive when rank AND value are identical (Goldene Mitte)
+        // "Mit ist Shit" (position tie-break) is intentionally left to RoundEvaluator (LIFO/FIFO),
+        // because turn order is a property of the round, not of the roll itself.
+        return Boolean.compare(this.hand, other.hand);
     }
 }
