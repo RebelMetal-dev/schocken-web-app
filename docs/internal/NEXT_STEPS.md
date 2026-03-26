@@ -21,3 +21,21 @@ Extrahiert aus VISION_AND_ROADMAP.md — internes Dokument, nicht für das öffe
    - `GameSession.activeParticipantIndex` (int) — wer ist gerade dran.
    - `GameParticipant.cupRevealed` (boolean) — Becher physisch aufgedeckt (für sequentiellen Showdown).
    - Hinweis: `blind` existiert bereits auf `GameParticipant` — NICHT auf `GameSession` duplizieren.
+
+---
+
+## Offene Punkte / Technische Schulden
+
+### Massen-Reveal am Showdown-Ende
+- `revealCup()` im GameService ist die Einzelaktion (ein Spieler deckt auf, ggf. mit Strafchip).
+- Am Ende einer Runde (Showdown) müssen **alle** `cupRevealed`-Flags auf `true` gesetzt werden,
+  damit Frontend-Animationen die Würfel aller Spieler gleichzeitig anzeigen können.
+- Verantwortung: `RoundEvaluator` oder als letzter Schritt in `evaluateRoundAndDistributeChips()`
+  — vor dem `resetRoll()`-Aufruf.
+
+### Verlierer als neuer Beginner
+- `finishTurn()` zählt `activeParticipantIndex` mechanisch per Modulo hoch.
+- Nach `evaluateRoundAndDistributeChips()` muss `activeParticipantIndex` auf den **Verlierer**
+  gesetzt werden (dieser ist der Beginner der nächsten Runde, SCHOCKEN_RULES.md §2c).
+- Aktuell fehlt dieser Schritt — zu klären mit Gemini ob das in `evaluateRound...()` oder
+  in einer separaten `startNextRound()`-Methode passiert.

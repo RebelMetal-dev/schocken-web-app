@@ -259,7 +259,38 @@ Architectural transition from a static Thymeleaf monitoring dashboard to an inte
 * Root conclusion: the app was working all along. The dice display changes are visually
   subtle (small `font-monospace` span). Visual feedback enhancement planned as Milestone 10.
 
-## 12. Technical Debt & Notes
+## 12. Phase 1: Domain & Service Refactoring (Completed ✅) — 29 Tests grün
+
+### 12a. DiceRoll.compareTo() — Goldene Mitte Fix
+* Priority chain corrected: **Rank → Numerical Value → Hand-Status**.
+* `throwCount` removed from `compareTo` — it is a round-order property, not a roll-quality property.
+* Root insight: as long as `throwCount` was in `compareTo`, the method never returned `0`,
+  making LIFO/FIFO in `RoundEvaluator` factually inoperative.
+
+### 12b. Model Extensions
+* `GameSession.rollLimit` (default 0) — set by the Beginner; `0` means "not yet decided".
+* `GameSession.activeParticipantIndex` (default 0) — advanced via modulo by `GameService`.
+* `GameParticipant.cupRevealed` (default false) — physical cup state for showdown reveal.
+* `GameParticipant.resetRoll()` extended to also clear `cupRevealed`.
+
+### 12c. GameService Consolidation
+* `applyRoll(GameSession, GameParticipant, DiceRoll)` — private hub for all roll actions.
+  Enforces turn order (activeParticipantIndex) and roll limit guard per SCHOCKEN_RULES.md §2a.
+* `finishTurn(UUID, UUID)` — fixates `rollLimit` on the Beginner's first call (causal ordering
+  requirement: limit must be set before index advances), then advances turn pointer via modulo.
+* `revealCup(UUID, UUID)` — idempotent. Applies 1-chip Blind-Zwang penalty if the player
+  reveals after exhausting the roll limit (SCHOCKEN_RULES.md §3.2). Computed state:
+  `blindMandatory = throwCount >= rollLimit && rollLimit > 0`.
+
+### 12d. Showdown Reveal, Pitter-Rule & Round Reset
+* **Showdown Reveal:** all `cupRevealed = true` before reset, so the frontend can display results.
+* **Pitter-Rule:** `activeParticipantIndex = participants.indexOf(loser)` — direct assignment,
+  not modulo increment. The round loser becomes the Beginner of the next round (SCHOCKEN_RULES.md §2c).
+* **`resetRoundState()`:** clears `lastRoll`, `throwCount`, `cupRevealed` per participant
+  and resets `session.rollLimit = 0`. Skipped on `GAME_OVER`.
+* Causal order enforced: Reveal → Pitter-Move → Reset.
+
+## 13. Technical Debt & Notes
 * *Note:* Ensure all future business logic remains in Services/Evaluators, not in Entities (SRP).
 * *Note:* Maintain 100% English naming convention for all new components.
 * *Note:* `@NoArgsConstructor(force = true)` on `DiceRoll` creates a JPA-only constructor with null dice — never call `new DiceRoll()` directly in production code.
