@@ -1,11 +1,22 @@
-HELP.md
-.gradle
+### --- Build Tools (Gradle) ---
+.gradle/
 build/
+bin/
+out/
+# Wir ignorieren Build-Ordner, aber behalten den Wrapper, damit das Projekt baubar bleibt
 !gradle/wrapper/gradle-wrapper.jar
 !**/src/main/**/build/
 !**/src/test/**/build/
+!**/src/main/**/bin/
+!**/src/test/**/bin/
+!**/src/main/**/out/
+!**/src/test/**/out/
 
-### STS ###
+### --- IDEs (IntelliJ, STS, VS Code, NetBeans) ---
+.idea/
+*.iws
+*.iml
+*.ipr
 .apt_generated
 .classpath
 .factorypath
@@ -13,32 +24,35 @@ build/
 .settings
 .springBeans
 .sts4-cache
-bin/
-!**/src/main/**/bin/
-!**/src/test/**/bin/
-
-### IntelliJ IDEA ###
-.idea
-*.iws
-*.iml
-*.ipr
-out/
-!**/src/main/**/out/
-!**/src/test/**/out/
-
-### NetBeans ###
 /nbproject/private/
 /nbbuild/
 /dist/
 /nbdist/
 /.nb-gradle/
-
-### VS Code ###
 .vscode/
 
-### Personal Notes ###
+### --- Architecture, Security & Logs ---
+.env
+config/secrets.*
+*.log
+.logs/
+console-export-*.log
+
+### --- Claude Code (local AI tooling) ---
+.claude/
+
+### --- Personal Notes & Internal Docs ---
+# Diese Dateien sind aktuell im Repo, können hier aber später versteckt werden
 HANDOUT_KNOWLEDGE_BASE.md
 *_protocol.md
+CLAUDE.md
+GEMINI.md
+DEVELOPER_MENTOR_MANIFESTO.md
 
-### ARCHITECTURE & SECURITY LOG ###
-.env
+### --- OS Specific ---
+.DS_Store
+Thumbs.db
+
+### --- Others ---
+HELP.md
+Schockregeln.txt

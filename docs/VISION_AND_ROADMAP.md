@@ -51,7 +51,10 @@ Die Final-Logik muss dynamisch sein. Wenn ein dritter Spieler (der nicht im Fina
 
 ---
 
-## 5. Nächster Arbeitsschritt für die KI (Claude)
-1. Analysiere `DiceRoll.java` und korrigiere die `compareTo`-Methode gemäß Prioritätskette.
-2. Erweitere den `GameService`, um manuelle Eingaben (`ManualRollDTO`) zu verarbeiten.
-3. Bereite die `GameSession` auf Zustandsvariablen wie `isBlind` und `revealAllowed` vor.
+## 5. Geplante Features
+
+- Regelkonformer Vergleich aller Würfe inkl. Hand-Status und Positionsregel (Goldene Mitte)
+- Konfigurierbare Betriebsmodi: virtuell, haptisch (Schiri) und IoT/Remote
+- Thrill-Mechanik: manuelles Aufdecken ("Lupfen") mit automatischer Strafchip-Vergabe bei Regelverstoß
+- Dynamisches Finale mit Gefangen-Regel für unbeabsichtigt eingewürfelte Spieler
+- Echtzeit-Multiplayer über WebSockets (STOMP)
