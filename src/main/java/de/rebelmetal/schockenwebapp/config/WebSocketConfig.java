@@ -34,7 +34,11 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
     @Override
     public void registerStompEndpoints(StompEndpointRegistry registry) {
         // WebSocket handshake endpoint. Clients connect to ws://host/ws.
+        // setAllowedOriginPatterns("*") permits cross-origin handshakes (e.g. React dev server on :3000).
+        // Replace "*" with specific domains (e.g. "http://localhost:3000") before going to production.
         // withSockJS() provides a fallback for browsers that do not support WebSocket natively.
-        registry.addEndpoint("/ws").withSockJS();
+        registry.addEndpoint("/ws")
+                .setAllowedOriginPatterns("*")
+                .withSockJS();
     }
 }
