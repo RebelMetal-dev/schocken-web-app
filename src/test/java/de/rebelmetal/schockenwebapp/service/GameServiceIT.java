@@ -97,6 +97,88 @@ class GameServiceIT {
                 "Phase must not transition to SECOND_HALF while the central stack is not empty.");
     }
 
+    @Test
+    @DisplayName("Full-flow round cycle: Charlie loses LIFO tie-breaker and becomes next starter")
+    void fullRoundCycle_charlieLosesLifoTieBreaker_becomesNextStarter() {
+        // --- ARRANGE ---
+
+        // 1. Create 3 players
+        Player alice   = playerRepository.save(new Player("Alice"));
+        Player bob     = playerRepository.save(new Player("Bob"));
+        Player charlie = playerRepository.save(new Player("Charlie"));
+
+        // 2. Create session — centralStack = 13, activeParticipantIndex = 0 (Alice is starter)
+        GameSession session = gameService.createSession(
+                List.of(alice.getId(), bob.getId(), charlie.getId()));
+
+        UUID pidAlice   = getParticipantId(session, alice.getId());
+        UUID pidBob     = getParticipantId(session, bob.getId());
+        UUID pidCharlie = getParticipantId(session, charlie.getId());
+
+        // 3. Full-flow: each player rolls then finishes their turn in seat order.
+        //    Alice's finishTurn() fixates rollLimit = 1 for the entire round.
+        //    Alice   → Shock 2   (2,1,1) → SHOCK rank, penalty = 2        ← WINNER
+        //    Bob     → House Num (6,4,1) → HOUSE_NUMBER rank, rolled first among tied losers
+        //    Charlie → House Num (6,4,1) → HOUSE_NUMBER rank, rolled last  ← ROUND LOSER (LIFO)
+        gameService.performManualRoll(session.getId(), pidAlice,   2, 1, 1, true, 1);
+        gameService.finishTurn(session.getId(), pidAlice);
+
+        gameService.performManualRoll(session.getId(), pidBob,     6, 4, 1, true, 1);
+        gameService.finishTurn(session.getId(), pidBob);
+
+        gameService.performManualRoll(session.getId(), pidCharlie, 6, 4, 1, true, 1);
+        gameService.finishTurn(session.getId(), pidCharlie);
+
+        // --- ACT ---
+        // Play order passed explicitly — critical for LIFO tie-breaking (Charlie rolled last → loses)
+        gameService.evaluateRoundAndDistributeChips(
+                session.getId(), List.of(pidAlice, pidBob, pidCharlie));
+
+        // --- ASSERT ---
+        GameSession result = gameSessionRepository.findById(session.getId()).orElseThrow();
+
+        GameParticipant charlieResult = result.getParticipants().stream()
+                .filter(p -> p.getId().equals(pidCharlie))
+                .findFirst()
+                .orElseThrow();
+
+        GameParticipant bobResult = result.getParticipants().stream()
+                .filter(p -> p.getId().equals(pidBob))
+                .findFirst()
+                .orElseThrow();
+
+        // 1. Central stack: 13 - 2 (Alice's Shock 2 penalty) = 11
+        assertEquals(11, result.getCentralStack(),
+                "Central stack must decrease from 13 to 11 (Shock 2 penalty = 2 chips).");
+
+        // 2. Round loser (Charlie) must hold exactly 2 penalty chips
+        assertEquals(2, charlieResult.getPenaltyChips(),
+                "Round loser (Charlie) must receive exactly 2 penalty chips.");
+
+        // 3. Bob must have 0 penalty chips — confirms LIFO picked Charlie, not Bob
+        assertEquals(0, bobResult.getPenaltyChips(),
+                "Bob must have 0 penalty chips — LIFO tie-breaker must select Charlie (later roller).");
+
+        // 4. Loser-to-Starter Transition: activeParticipantIndex must point to Charlie
+        int charlieIndex = result.getParticipants().indexOf(charlieResult);
+        assertEquals(charlieIndex, result.getActiveParticipantIndex(),
+                "Active participant index must point to the round loser (Charlie) for the next round.");
+
+        // 5. Hard Reset: rollLimit must be cleared to 0
+        assertEquals(0, result.getRollLimit(),
+                "Roll limit must be reset to 0 after round evaluation.");
+
+        // 6. Hard Reset: all lastRoll must be null
+        result.getParticipants().forEach(p ->
+                assertNull(p.getLastRoll(),
+                        "All participants must have lastRoll == null after hard reset."));
+
+        // 7. Hard Reset: all cupRevealed must be false
+        result.getParticipants().forEach(p ->
+                assertFalse(p.isCupRevealed(),
+                        "All participants must have cupRevealed == false after hard reset."));
+    }
+
     /** Resolves the participant ID for a given player within a session. */
     private UUID getParticipantId(GameSession session, UUID playerId) {
         return session.getParticipants().stream()
