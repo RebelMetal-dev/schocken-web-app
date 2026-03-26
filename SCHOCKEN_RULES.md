@@ -1,61 +1,39 @@
-# Schocken — Vollständige Spielregeln (Referenz für Implementierung)
+# Schocken — Vollständige Spielregeln v2 (Referenz für Implementierung)
 
-Quelle: Direktes Diktat vom Spieleigentümer. Massgeblich für alle UI- und Service-Entscheidungen.
+Diese Datei enthält das verbindliche Regelwerk inklusive aller taktischen Feinheiten (Hand-Mutation, Goldene Mitte, Gefangen-Regel). Sie dient als Master-Logik für den `RoundEvaluator` und den `GameService`.
 
 ---
 
 ## 1. Anfangsrunde (Setup Phase)
 
-* Alle Mitspieler würfeln **genau einmal** mit allen 3 Würfeln im Schockbecher.
-* Alle heben **gleichzeitig** auf — kein Spieler darf vorher schauen.
-* Die Ergebnisse werden ausgewertet: der **Verlierer** der Anfangsrunde bekommt die Deckel
-  (Chips) lt. Wertigkeit des Gewinnerwurfes direkt aus dem CentralStack.
-* **Stechen (Tie-Break in der Anfangsrunde):**
-  * Wenn 2+ Spieler denselben **besten** Wurf haben → diese stechen.
-  * Wenn 2+ Spieler denselben **schlechtesten** Wurf haben → diese stechen.
-  * Beim Stechen in der Anfangsrunde spielt die Reihenfolge keine Rolle
-    (alle würfeln ja sowieso nur einmal).
-  * Nach dem Stechen: der Verlierer des Stechens bekommt die Chips lt. Wertigkeit des
-    Gewinnerwurfes aus dem Stechen.
-* Der **Verlierer der Anfangsrunde** ist der **Beginner** — er darf als erster in der
-  eigentlichen Partie anfangen.
-* Die **Sitzordnung** ergibt sich automatisch: der Spieler links vom Beginner ist der
-  Nächste, dann der übernächste usw.
+* **Der Wurf:** Alle Mitspieler würfeln **genau einmal** mit allen 3 Würfeln verdeckt im Becher.
+* **Simultanes Aufdecken:** Alle heben **gleichzeitig** auf — kein Spieler darf vorher schauen.
+* **Bestimmung der Deckel:** Der höchste Wurf am Tisch bestimmt die Anzahl der Chips, die aus dem **CentralStack** (13 Stück) verteilt werden.
+* **Stechen (Tie-Break in der Anfangsrunde):** * Wenn 2+ Spieler denselben **schlechtesten** Wurf haben → diese stechen, bis ein eindeutiger Verlierer feststeht.
+* **Beginner:** Der finale Verlierer der Anfangsrunde ist der **Vorleger** der ersten Hauptrunde.
+* **Sitzordnung:** Ergibt sich automatisch; der Spieler links vom Beginner ist der Nächste (Uhrzeigersinn).
 
 ---
 
-## 2. Hauptrunde — Ablauf
+## 2. Hauptrunde — Ablauf & Taktik
 
-### 2a. Wurf-Limit (Beginner-Regel)
-* Der **Beginner entscheidet** zu Beginn seiner Runde, wie oft er würfelt: **1×, 2× oder 3×**.
-* Alle anderen Spieler dürfen **maximal gleich oft** würfeln wie der Beginner.
-* Würfelt der Beginner nur 1×, dürfen alle nur 1× würfeln — auch wenn sie möchten.
+### 2a. Wurf-Limit & Blind-Option
+* **Limit:** Der Beginner entscheidet, wie oft er würfelt: **1×, 2× oder 3×**. Dies ist das Limit für alle Nachfolger.
+* **Taktik des Vorlegers:** Er kann nach dem 1. oder 2. Wurf **aufdecken**, um Druck aufzubauen, oder **blind liegen lassen** (Bluff).
+* **Blind-Zwang:** Wer das Limit voll ausschöpft (z.B. den 3. Wurf macht), **muss** den Becher verdeckt lassen.
+* **Blind stehen lassen (Thrill):** Wer vor dem Limit aufhört, kann den Becher dennoch verdeckt lassen, um Nachfolger im Unklaren zu lassen.
+* **Strafchips:** Wer unaufgefordert zu früh aufdeckt (beim Limit-Wurf) oder einen Becher hebt, der laut Vorleger blind bleiben muss → **1 Strafchip sofort**.
 
-### 2b. Reihenfolge & Aufdecken
-* Jeder Spieler würfelt der Reihe nach (gemäss Sitzordnung, links vom Beginner weiter).
-* **Frühes Aufdecken verboten:** Kein Spieler darf seinen Deckel hochheben und die Würfel
-  anschauen, bevor er dran ist. Wer zu früh aufdeckt → **Strafchips**.
-* Der Beginner legt nach seinem letzten Wurf seinen Becher offen — alle anderen sehen
-  erst dann das Ergebnis des Beginners.
+### 2b. Sonderregel: Hand-Wandlung (Sechsen-Wandlung)
+* **Nur 1en sammeln:** Es dürfen ausschließlich Einsen (oder gewandelte Sechsen) rausgelegt werden.
+* **Wandlung:** Nur möglich bei einem Wurf **"aus der Hand"** (alle aktuell genutzten Würfel gleichzeitig geworfen).
+  * Zwei Sechsen (6,6) im Handwurf → können zu **einer Eins** umgedreht werden.
+  * Drei Sechsen (6,6,6) im Handwurf → können zu **zwei Einsen** umgedreht werden.
+* **Risiko-Reset:** Ein Spieler kann jederzeit alle bereits rausgelegten Einsen wieder einpacken und alles neu werfen, um den **Hand-Status** zu erzwingen.
 
-### 2c. Sonderregel: Hand-Kombination (Schock greifen)
-* Wenn ein Spieler **aus der Hand** (erster Wurf) zwei Sechsen hat, kann er diese
-  beiden Sechsen zu **einer Eins** zusammenlegen.
-* Der eine "kombinierte" Würfel zeigt dann eine 1. Mit den verbleibenden Würfeln
-  würfelt er weiter und versucht noch eine oder zwei weitere Einsen zu bekommen.
-* Ziel: Schock (x, 1, 1) oder Schock-Aus (1, 1, 1) erreichen.
-
-### 2d. Rundenauswertung
-* Wenn alle Spieler gewürfelt haben, werden die Ergebnisse verglichen.
-* Der **Verlierer** bekommt die Deckel lt. Wertigkeit des **Gewinnerwurfes**.
-* **Chip-Quelle:** Chips kommen immer zuerst aus dem CentralStack.
-  Erst wenn der CentralStack leer ist, werden Chips von Spieler zu Spieler verteilt.
-* **Tie-Breaking bei gleicher Wertigkeit:**
-  1. **Hand-Wurf schlägt kombinierten Wurf** — wer seinen Wurf in einem Zug (aus der Hand)
-     erreicht hat, gewinnt gegenüber demjenigen der mehrfach würfeln musste.
-  2. **"Mit ist shit" (Reihenfolge-Regel):** Bei gleicher Wertigkeit und gleicher Art
-     (beide Hand oder beide kombiniert) gewinnt der Spieler der **früher** in der Runde
-     gewürfelt hat — wer zuerst kommt, mahlt zuerst.
+### 2c. Reihenfolge & Showdown
+* Jede neue Runde beginnt der **Verlierer der Vorrunde**. Die Reihenfolge verschiebt sich dadurch ständig.
+* **Sequentieller Showdown:** Nach dem letzten Spieler werden alle verdeckten Becher **nacheinander per Interaktion** in Spielreihenfolge aufgedeckt.
 
 ---
 
@@ -65,61 +43,38 @@ Quelle: Direktes Diktat vom Spieleigentümer. Massgeblich für alle UI- und Serv
 | :--- | :--- | :--- | :--- |
 | 1 (höchste) | Schock-Aus | 1, 1, 1 | 13 (gesamter Stack) |
 | 2 | Schock x | x, 1, 1 (x = Augenzahl) | x Chips |
-| 3 | Triplet | x, x, x | 3 Chips |
+| 3 | Triplet (General) | x, x, x | 3 Chips |
 | 4 | Strasse | x, x-1, x-2 | 2 Chips |
 | 5 (niedrigste) | Hausnummer | alle anderen | 1 Chip |
 
-*Innerhalb eines Rangs: höherer Zahlenwert gewinnt (z.B. Schock 6 > Schock 5).*
+---
+
+## 4. Die "Schock-Dynamik" (Tie-Breaking & Wertung)
+
+Bei gleicher Augenzahl (z.B. zwei Spieler haben einen Schock 4) entscheidet:
+
+1. **Status-Regel:** **Hand-Wurf schlägt kombinierten Wurf.** Wer seinen Wurf in einem Zug (ohne Rauslegen) erreicht hat, gewinnt gegenüber demjenigen, der gesammelt hat.
+2. **"Mit ist shit" (Reihenfolge):** Bei gleichem Status gewinnt der Spieler, der **früher** in der Runde gewürfelt hat. Der Nachzügler verliert.
+3. **Die Goldene Mitte:** Ein Hand-Wurf kann einen Spieler zum Gewinner mutieren lassen, wodurch der ursprüngliche Gewinner (zusammen) in die "Goldene Mitte" rutscht und gerettet ist. Der schlechtere Wurf bleibt Verlierer.
 
 ---
 
-## 4. Erste & Zweite Hälfte
+## 5. Erste & Zweite Hälfte
 
-* Eine Hälfte läuft so lange bis **ein Spieler genau 13 Chips** angesammelt hat.
-* Dieser Spieler hat die Hälfte **verloren** — er bekommt einen roten Markierungsdeckel
-  (oder ein anderes Objekt) als Kennzeichnung.
-* Der **Verlierer der ersten Hälfte** ist der **Beginner für die zweite Hälfte** —
-  er entscheidet wieder das Wurf-Limit.
-* Die zweite Hälfte läuft identisch zur ersten.
+* Wer **13 Chips** angesammelt hat, verliert die Hälfte → **Roter Markierungsdeckel**.
+* Der **Verlierer der ersten Hälfte** ist der Beginner für die zweite Hälfte.
+* **Blattschuss:** Wenn derselbe Spieler beide Hälften verliert → Spielende, dieser Spieler ist der Gesamtverlierer.
 
 ---
 
-## 5. Spielende & Finale
+## 6. Finale & Sonderregeln
 
-### 5a. Blattschuss
-* Wenn der **gleiche Spieler** beide Hälften verloren hat → **Blattschuss**.
-* Das Spiel ist sofort vorbei. Dieser Spieler ist der **Gesamtverlierer**.
+### 6a. Das Finale
+* Zwei Hälften-Verlierer spielen gegeneinander, bis einer 13 Chips hat.
 
-### 5b. Finale (2 verschiedene Halbzeit-Verlierer)
-* Wenn **zwei verschiedene Spieler** die Hälften verloren haben, spielen **nur diese zwei**
-  das Finale. Alle anderen Spieler scheiden aus.
-* Das Finale läuft wie eine normale Runde — bis einer der beiden 13 Chips hat.
-* Dieser Spieler ist der **Gesamtverlierer**.
+### 6b. Versehentliches Einwürfeln (Gefangen-Regel)
+* Wer sich unachtsam ins Finale einwürfelt (Interaktion ausführt) und einen Chip kassiert, ist **"gefangen"**.
+* Er muss so lange mitspielen, bis er seine Chips wieder los ist oder der CentralStack leer ist.
 
-### 5c. Sonderregel: Versehentliches Einwürfeln ins Finale
-* Falls ein Spieler, der eigentlich **nicht** im Finale ist, unachtsam einen Chip bekommt
-  (z.B. weil er noch mitgewürfelt hat obwohl er nicht hätte sollen), muss er
-  **mindestens diesen Wurf mitspielen**.
-* Bekommt er dabei einen weiteren Chip → ist er offiziell in der Finalrunde dabei
-  und kann als **dritter Spieler** der Gesamtverlierer werden.
-
----
-
-## 6. Implementierungs-Backlog (offene Punkte)
-
-Folgende Regeln sind in der **Business-Logik (Service-Layer) bereits implementiert**:
-- Würfelbewertung und Rangfolge (`DiceRoll.compareTo()`)
-- Chip-Verteilung aus CentralStack und Spieler-zu-Spieler (`distributeChips`)
-- Setup-Phase Auswertung mit Stechen (`evaluateSetupAndDetermineOrder`)
-- Phasenübergänge H1 → H2 → FINAL_MATCH → GAME_OVER (`handlePhaseTransitions`)
-- Blattschuss-Erkennung (`hasLostMatch()`)
-- Schock-Aus Sonderbehandlung (`handleShockOut`)
-
-Folgende Punkte fehlen noch im **UI-Layer / Controller**:
-1. **Beginner legt Wurf-Limit fest** (1/2/3) — alle anderen sind daran gebunden
-2. **Reihenfolge-Anzeige** — wer ist gerade dran (aktiver Spieler hervorheben)
-3. **Anfangsrunde als eigener UI-Flow** — alle würfeln einmal, dann gemeinsames Evaluate
-4. **Hand-Würfel Sonderregel** — zwei Sechsen zu einer Eins kombinieren (UI + Service)
-5. **Frühes-Aufdecken-Strafe** — in der digitalen Version vereinfacht (nicht dringend)
-6. **Würfel-Visualisierung** — Würfelwerte als individuelle grosse Boxen statt String
-7. **Markierungsdeckel** — visueller Hinweis auf Halbzeit-Verlierer (roter Deckel)
+### 6c. Die Bierrunde (Tradition)
+* Der finale Gesamtverlierer übernimmt die **Bierrunde** für alle Teilnehmer der Partie.
