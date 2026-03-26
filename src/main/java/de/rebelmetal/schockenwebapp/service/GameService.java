@@ -114,12 +114,9 @@ public class GameService {
                 .findFirst()
                 .orElseThrow(() -> new EntityNotFoundException(
                         "Participant " + participantId + " not in session " + sessionId));
-        int newThrowCount = p.getThrowCount() + 1;
-        boolean isHand = (newThrowCount == 1);
-        DiceRoll roll = diceService.rollVirtually(isHand, newThrowCount);
-        p.setLastRoll(roll);
-        p.setThrowCount(newThrowCount);
-        return gameParticipantRepository.save(p);
+        boolean isHand = (p.getThrowCount() == 0);
+        DiceRoll roll = diceService.rollVirtually(isHand, p.getThrowCount() + 1);
+        return applyRoll(session, p, roll);
     }
 
     @Transactional
@@ -258,12 +255,109 @@ public class GameService {
                 .orElseThrow(() -> new EntityNotFoundException("Session not found: " + sessionId));
     }
 
+    // --- Turn Management ---
+
+    // Central validation hub for all roll actions (virtual and manual).
+    // Enforces turn order and roll limit before any dice state is written.
+    // Called exclusively from performVirtualRoll() and performManualRoll() — never from outside.
+    private GameParticipant applyRoll(GameSession session, GameParticipant participant, DiceRoll roll) {
+        // 1. Turn check: only the active player may roll
+        GameParticipant active = session.getParticipants().get(session.getActiveParticipantIndex());
+        if (!active.getId().equals(participant.getId())) {
+            throw new IllegalStateException(
+                    "It is not " + participant.getPlayer().getName() + "'s turn. " +
+                    "Active player: " + active.getPlayer().getName());
+        }
+
+        // 2. Limit guard (SCHOCKEN_RULES.md §2a).
+        // rollLimit == 0 means the Beginner has not finished their turn yet (setup/initial roll phase).
+        // In that state no limit is enforced, so the Beginner may roll up to 3 times freely.
+        if (session.getRollLimit() > 0 && participant.getThrowCount() >= session.getRollLimit()) {
+            throw new IllegalStateException(
+                    "Roll limit of " + session.getRollLimit() + " reached for "
+                    + participant.getPlayer().getName());
+        }
+
+        // 3. Apply roll
+        participant.setLastRoll(roll);
+        participant.setThrowCount(participant.getThrowCount() + 1);
+        return gameParticipantRepository.save(participant);
+    }
+
+    // Called when the active player voluntarily stops rolling (or has no rolls left).
+    // Fixates rollLimit on the Beginner's first finishTurn, then advances the turn pointer.
+    @Transactional
+    public GameSession finishTurn(UUID sessionId, UUID participantId) {
+        GameSession session = gameSessionRepository.findById(sessionId)
+                .orElseThrow(() -> new EntityNotFoundException("Session not found: " + sessionId));
+        GameParticipant p = session.getParticipants().stream()
+                .filter(part -> part.getId().equals(participantId))
+                .findFirst()
+                .orElseThrow(() -> new EntityNotFoundException(
+                        "Participant " + participantId + " not in session " + sessionId));
+
+        // Turn check: only the active player may end their turn
+        GameParticipant active = session.getParticipants().get(session.getActiveParticipantIndex());
+        if (!active.getId().equals(p.getId())) {
+            throw new IllegalStateException(
+                    "It is not " + p.getPlayer().getName() + "'s turn to finish.");
+        }
+
+        // Fixate rollLimit: Beginner's throwCount becomes the limit for all other players.
+        // Causally must happen before the index is advanced (SCHOCKEN_RULES.md §2a).
+        if (session.getRollLimit() == 0) {
+            session.setRollLimit(p.getThrowCount());
+            log.info("Roll limit set to {} by Beginner {}.", p.getThrowCount(), p.getPlayer().getName());
+        }
+
+        // Advance turn pointer using modulo to wrap around the participant list
+        int nextIndex = (session.getActiveParticipantIndex() + 1) % session.getParticipants().size();
+        session.setActiveParticipantIndex(nextIndex);
+
+        return gameSessionRepository.save(session);
+    }
+
+    // Called when a player clicks the "Lupfen" (reveal cup) button (SCHOCKEN_RULES.md §3.2).
+    // Idempotent: revealing an already-revealed cup is a no-op.
+    // Blind-Zwang violation: if the player reached the roll limit and reveals anyway,
+    // they receive 1 penalty chip immediately and the cup stays revealed.
+    @Transactional
+    public GameParticipant revealCup(UUID sessionId, UUID participantId) {
+        GameSession session = gameSessionRepository.findById(sessionId)
+                .orElseThrow(() -> new EntityNotFoundException("Session not found: " + sessionId));
+        GameParticipant p = session.getParticipants().stream()
+                .filter(part -> part.getId().equals(participantId))
+                .findFirst()
+                .orElseThrow(() -> new EntityNotFoundException(
+                        "Participant " + participantId + " not in session " + sessionId));
+
+        if (p.isCupRevealed()) {
+            return p;
+        }
+
+        // Blind-Zwang: player who exhausted the roll limit must keep cup covered (§2a).
+        // blindMandatory is computed state — no extra field needed.
+        boolean blindMandatory = session.getRollLimit() > 0
+                && p.getThrowCount() >= session.getRollLimit();
+        if (blindMandatory) {
+            int penalty = Math.min(session.getCentralStack(), 1);
+            session.setCentralStack(session.getCentralStack() - penalty);
+            p.setPenaltyChips(p.getPenaltyChips() + penalty);
+            log.warn("Blind-Zwang violated by {}. 1 penalty chip applied.", p.getPlayer().getName());
+            gameSessionRepository.save(session);
+        }
+
+        p.setCupRevealed(true);
+        return gameParticipantRepository.save(p);
+    }
+
     @Transactional
     public GameParticipant performManualRoll(UUID sessionId, UUID participantId, int d1, int d2, int d3, boolean hand, int count) {
         GameSession session = gameSessionRepository.findById(sessionId).orElseThrow();
-        GameParticipant p = session.getParticipants().stream().filter(part -> part.getId().equals(participantId)).findFirst().orElseThrow();
-        p.setLastRoll(new DiceRoll(d1, d2, d3, hand, count));
-        p.setThrowCount(count);
-        return gameParticipantRepository.save(p);
+        GameParticipant p = session.getParticipants().stream()
+                .filter(part -> part.getId().equals(participantId))
+                .findFirst()
+                .orElseThrow();
+        return applyRoll(session, p, new DiceRoll(d1, d2, d3, hand, count));
     }
 }

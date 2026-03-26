@@ -56,16 +56,21 @@ class GameServiceIT {
         UUID pidCharlie = getParticipantId(session, charlie.getId());
         UUID pidDiana   = getParticipantId(session, diana.getId());
 
-        // 4. Assign rolls:
+        // 4. Assign rolls — each player must finish their turn before the next may roll.
+        //    Alice calls finishTurn() first, which fixates rollLimit = 1 for the whole round.
         //    Alice   → Shock 2   (1-1-2) → SHOCK rank,        penalty = 2  ← WINNER
         //    Bob     → Triplet   (4-4-4) → TRIPLET rank
         //    Charlie → Straight  (3-4-5) → STRAIGHT rank
         //    Diana   → House Num (6-5-3) → HOUSE_NUMBER rank               ← LOSER
         //    Note: 6-5-4 would be a Straight — 6-5-3 is the correct House Number here.
         gameService.performManualRoll(session.getId(), pidAlice,   1, 1, 2, true, 1);
+        gameService.finishTurn(session.getId(), pidAlice);      // fixates rollLimit = 1
         gameService.performManualRoll(session.getId(), pidBob,     4, 4, 4, true, 1);
+        gameService.finishTurn(session.getId(), pidBob);
         gameService.performManualRoll(session.getId(), pidCharlie, 3, 4, 5, true, 1);
+        gameService.finishTurn(session.getId(), pidCharlie);
         gameService.performManualRoll(session.getId(), pidDiana,   6, 5, 3, true, 1);
+        gameService.finishTurn(session.getId(), pidDiana);
 
         // --- ACT ---
         // Play order passed explicitly — essential for LIFO/FIFO tie-breaking
