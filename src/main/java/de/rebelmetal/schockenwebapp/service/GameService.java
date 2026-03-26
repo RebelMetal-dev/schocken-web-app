@@ -1,5 +1,6 @@
 package de.rebelmetal.schockenwebapp.service;
 
+import de.rebelmetal.schockenwebapp.dto.GameStateDTO;
 import de.rebelmetal.schockenwebapp.dto.RoundResultDTO;
 import de.rebelmetal.schockenwebapp.exception.PlayerNotFoundException;
 import de.rebelmetal.schockenwebapp.model.*;
@@ -273,6 +274,18 @@ public class GameService {
     public GameSession getSession(UUID sessionId) {
         return gameSessionRepository.findById(sessionId)
                 .orElseThrow(() -> new EntityNotFoundException("Session not found: " + sessionId));
+    }
+
+    /**
+     * Returns a filtered state projection of the session, safe for broadcasting to all clients.
+     * Dice values are hidden (null) for participants whose cup has not been revealed yet.
+     * Mapping happens inside the transaction so lazy-loaded participants are always accessible.
+     */
+    @Transactional(readOnly = true)
+    public GameStateDTO getSessionState(UUID sessionId) {
+        GameSession session = gameSessionRepository.findById(sessionId)
+                .orElseThrow(() -> new EntityNotFoundException("Session not found: " + sessionId));
+        return GameStateDTO.from(session);
     }
 
     // --- Turn Management ---

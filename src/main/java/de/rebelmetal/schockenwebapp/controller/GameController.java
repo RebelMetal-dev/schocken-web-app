@@ -45,6 +45,17 @@ public class GameController {
     }
 
     /**
+     * Returns a filtered state projection of the session.
+     * Dice values are hidden (null) for participants whose cup is still covered.
+     * Safe for broadcasting to all clients without information leakage.
+     * GET /api/sessions/{sessionId}/state
+     */
+    @GetMapping("/{sessionId}/state")
+    public ResponseEntity<GameStateDTO> getSessionState(@PathVariable UUID sessionId) {
+        return ResponseEntity.ok(gameService.getSessionState(sessionId));
+    }
+
+    /**
      * Evaluates all rolls in the setup phase and determines the starting order.
      * On a tie, returns the tied participants and transitions to SETTING_UP_ORDER.
      * POST /api/sessions/{sessionId}/setup
