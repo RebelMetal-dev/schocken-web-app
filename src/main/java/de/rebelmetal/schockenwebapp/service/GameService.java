@@ -174,8 +174,20 @@ public class GameService {
             handlePhaseTransitions(session, loser);
         }
 
-        // 4b — Auto-reset all rolls for the next round
-        rollers.forEach(GameParticipant::resetRoll);
+        // Showdown reveal: set all cups visible so the frontend can display results.
+        // Must happen BEFORE resetRoundState(), which clears cupRevealed for the next round.
+        rollers.forEach(p -> p.setCupRevealed(true));
+
+        // Pitter rule: the round loser becomes the Beginner (starter) of the next round.
+        // activeParticipantIndex is set directly to the loser's position — not incremented via modulo.
+        // Skipped when the game is over — no next round to prepare (SCHOCKEN_RULES.md §2c).
+        boolean gameOver = session.getPhase() == GamePhase.GAME_OVER;
+        if (!gameOver) {
+            session.setActiveParticipantIndex(session.getParticipants().indexOf(loser));
+        }
+
+        // Hard reset: clear all per-round state so the next round starts clean.
+        resetRoundState(session, rollers);
 
         gameSessionRepository.save(session);
         return new RoundResultDTO(
@@ -183,7 +195,7 @@ public class GameService {
                 loser.getPlayer().getName(),
                 penalty,
                 rollsSnapshot,
-                session.getPhase() == GamePhase.GAME_OVER
+                gameOver
         );
     }
 
@@ -247,6 +259,14 @@ public class GameService {
     private void handleShockOut(GameSession session, GameParticipant loser) {
         loser.setPenaltyChips(loser.getPenaltyChips() + session.getCentralStack());
         session.setCentralStack(0);
+    }
+
+    // Clears all per-round state to prepare for the next round.
+    // Participant state (lastRoll, throwCount, cupRevealed) is reset via resetRoll().
+    // Session rollLimit is cleared so the next Beginner (starter) sets a new limit.
+    private void resetRoundState(GameSession session, List<GameParticipant> participants) {
+        participants.forEach(GameParticipant::resetRoll);
+        session.setRollLimit(0);
     }
 
     @Transactional(readOnly = true)
