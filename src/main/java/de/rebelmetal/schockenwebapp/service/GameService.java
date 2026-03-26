@@ -2,6 +2,7 @@ package de.rebelmetal.schockenwebapp.service;
 
 import de.rebelmetal.schockenwebapp.dto.GameStateDTO;
 import de.rebelmetal.schockenwebapp.dto.RoundResultDTO;
+import de.rebelmetal.schockenwebapp.event.GameStateChangedEvent;
 import de.rebelmetal.schockenwebapp.exception.PlayerNotFoundException;
 import de.rebelmetal.schockenwebapp.model.*;
 import de.rebelmetal.schockenwebapp.repository.GameParticipantRepository;
@@ -10,6 +11,7 @@ import de.rebelmetal.schockenwebapp.repository.PlayerRepository;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -29,6 +31,7 @@ public class GameService {
     private final PlayerRepository playerRepository;
     private final DiceService diceService;
     private final RoundEvaluator roundEvaluator;
+    private final ApplicationEventPublisher eventPublisher;
 
     @Transactional
     public GameSession createSession(List<UUID> playerIds) {
@@ -117,7 +120,9 @@ public class GameService {
                         "Participant " + participantId + " not in session " + sessionId));
         boolean isHand = (p.getThrowCount() == 0);
         DiceRoll roll = diceService.rollVirtually(isHand, p.getThrowCount() + 1);
-        return applyRoll(session, p, roll);
+        GameParticipant result = applyRoll(session, p, roll);
+        eventPublisher.publishEvent(new GameStateChangedEvent(this, sessionId));
+        return result;
     }
 
     @Transactional
@@ -191,6 +196,7 @@ public class GameService {
         resetRoundState(session, rollers);
 
         gameSessionRepository.save(session);
+        eventPublisher.publishEvent(new GameStateChangedEvent(this, sessionId));
         return new RoundResultDTO(
                 loser.getId(),
                 loser.getPlayer().getName(),
@@ -347,7 +353,9 @@ public class GameService {
         int nextIndex = (session.getActiveParticipantIndex() + 1) % session.getParticipants().size();
         session.setActiveParticipantIndex(nextIndex);
 
-        return gameSessionRepository.save(session);
+        GameSession saved = gameSessionRepository.save(session);
+        eventPublisher.publishEvent(new GameStateChangedEvent(this, sessionId));
+        return saved;
     }
 
     // Called when a player clicks the reveal cup button (SCHOCKEN_RULES.md §3.2).
@@ -381,7 +389,9 @@ public class GameService {
         }
 
         p.setCupRevealed(true);
-        return gameParticipantRepository.save(p);
+        GameParticipant saved = gameParticipantRepository.save(p);
+        eventPublisher.publishEvent(new GameStateChangedEvent(this, sessionId));
+        return saved;
     }
 
     @Transactional
@@ -391,6 +401,8 @@ public class GameService {
                 .filter(part -> part.getId().equals(participantId))
                 .findFirst()
                 .orElseThrow();
-        return applyRoll(session, p, new DiceRoll(d1, d2, d3, hand, count));
+        GameParticipant result = applyRoll(session, p, new DiceRoll(d1, d2, d3, hand, count));
+        eventPublisher.publishEvent(new GameStateChangedEvent(this, sessionId));
+        return result;
     }
 }
