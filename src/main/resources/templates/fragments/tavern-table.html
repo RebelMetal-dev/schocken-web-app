@@ -15,14 +15,16 @@
       - No CSS class names are computed in Java (ParticipantViewModel).
         th:classappend and th:if decide visual state based on semantic booleans.
 -->
-<div th:fragment="tavern-table" id="tavern-table" class="card p-4 rounded">
+<div th:fragment="tavern-table" id="tavern-table" class="card p-4 rounded"
+     th:data-session-id="${game?.id}">
 
     <!-- Session status bar -->
     <div class="row mb-4" th:if="${game != null}">
         <div class="col-md-4">
             <div class="p-3 border border-secondary rounded bg-dark">
                 <small class="text-muted d-block text-uppercase fw-bold">Phase</small>
-                <span class="fs-5 fw-bold text-primary" th:text="${game.phase}">WAITING</span>
+                <span class="fs-5 fw-bold text-primary" th:text="${game.phase}"
+                      data-ws="phase">WAITING</span>
             </div>
         </div>
         <div class="col-md-4">
@@ -31,7 +33,8 @@
                 <!-- Elvis operator (?:) guards against a null result from the
                      Thymeleaf expression engine before string concatenation. -->
                 <span class="fs-5 fw-bold text-info"
-                      th:text="${(game.centralStack ?: 0) + ' Chips'}">13 Chips</span>
+                      th:text="${(game.centralStack ?: 0) + ' Chips'}"
+                      data-ws="stack">13 Chips</span>
             </div>
         </div>
         <div class="col-md-4">

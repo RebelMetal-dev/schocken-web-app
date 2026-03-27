@@ -70,6 +70,20 @@ public class GameParticipant {
     private boolean cupRevealed = false;
 
     /**
+     * The first dice roll of the current turn.
+     * Frozen on the initial throw — used to restore lastRoll when a Strafdeckel is triggered
+     * (over-limit roll or Blind-Zwang violation). The first roll always counts in penalty cases
+     * (SCHOCKEN_RULES.md §2a).
+     */
+    @Embedded
+    @AttributeOverrides({
+        @AttributeOverride(name = "dice",       column = @Column(name = "first_roll")),
+        @AttributeOverride(name = "hand",       column = @Column(name = "first_roll_is_hand")),
+        @AttributeOverride(name = "throwCount", column = @Column(name = "first_roll_throw_count"))
+    })
+    private DiceRoll firstRoll;
+
+    /**
      * The last dice roll performed in the current turn.
      */
     @Embedded
@@ -100,6 +114,7 @@ public class GameParticipant {
      * Clears the last roll and throw count at the start of a new round.
      */
     public void resetRoll() {
+        this.firstRoll = null;
         this.lastRoll = null;
         this.throwCount = 0;
         this.cupRevealed = false;

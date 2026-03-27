@@ -13,6 +13,8 @@
     -->
     <script src="https://unpkg.com/htmx.org@2.0.0/dist/htmx.min.js"
             crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sockjs-client@1/dist/sockjs.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/stomp.js/2.3.3/stomp.min.js"></script>
     <style>
         body  { background-color: #121212; color: #e0e0e0; }
         .card { background-color: #1e1e1e; border: 1px solid #333; }
@@ -23,7 +25,10 @@
 <div class="container-fluid">
     <div class="d-flex justify-content-between align-items-center mb-4">
         <h1 class="text-warning mb-0">The Schocken Tavern</h1>
-        <a href="/" class="btn btn-outline-warning btn-sm">New Session</a>
+        <div class="d-flex align-items-center gap-3">
+            <span id="ws-indicator" class="small text-muted">⚪ Connecting...</span>
+            <a href="/" class="btn btn-outline-warning btn-sm">New Session</a>
+        </div>
     </div>
 
     <!--
@@ -57,5 +62,48 @@
     </div>
 </div>
 
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const indicator = document.getElementById('ws-indicator');
+
+        // Session ID is injected by Thymeleaf into the tavern-table root element.
+        // We re-read it on every message since HTMX may have swapped the element.
+        function getSessionId() {
+            const el = document.getElementById('tavern-table');
+            return el ? el.dataset.sessionId : null;
+        }
+
+        const sessionId = getSessionId();
+        if (!sessionId) {
+            indicator.textContent = '⚪ No session';
+            return;
+        }
+
+        const socket = new SockJS('/ws');
+        const stomp  = Stomp.over(socket);
+        stomp.debug  = null; // suppress console noise
+
+        stomp.connect({}, function () {
+            indicator.textContent = '🟢 Live';
+
+            stomp.subscribe('/topic/sessions/' + sessionId + '/state', function (msg) {
+                const state = JSON.parse(msg.body);
+
+                // Update Phase and Central Stack directly — no full-page reload needed.
+                const phaseEl = document.querySelector('[data-ws="phase"]');
+                const stackEl = document.querySelector('[data-ws="stack"]');
+                if (phaseEl) phaseEl.textContent = state.phase;
+                if (stackEl) stackEl.textContent = state.centralStack + ' Chips';
+
+                // Flash the indicator to show the update landed
+                indicator.textContent = '⚡ Updated';
+                setTimeout(() => { indicator.textContent = '🟢 Live'; }, 800);
+            });
+
+        }, function () {
+            indicator.textContent = '🔴 Disconnected';
+        });
+    });
+</script>
 </body>
 </html>

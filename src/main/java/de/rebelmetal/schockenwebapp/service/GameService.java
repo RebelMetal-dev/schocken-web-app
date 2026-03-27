@@ -312,12 +312,21 @@ public class GameService {
         // rollLimit == 0 means the starter has not finished their turn yet (setup/initial roll phase).
         // In that state no limit is enforced, so the starter may roll up to 3 times freely.
         if (session.getRollLimit() > 0 && participant.getThrowCount() >= session.getRollLimit()) {
-            throw new IllegalStateException(
-                    "Roll limit of " + session.getRollLimit() + " reached for "
-                    + participant.getPlayer().getName());
+            // Over-limit: 1 penalty chip immediately, first roll counts — later rolls are invalid.
+            int penalty = Math.min(session.getCentralStack(), 1);
+            session.setCentralStack(session.getCentralStack() - penalty);
+            participant.setPenaltyChips(participant.getPenaltyChips() + penalty);
+            participant.setLastRoll(participant.getFirstRoll()); // freeze to first roll
+            log.warn("Over-limit roll by {}. 1 penalty chip applied. lastRoll frozen to first roll.",
+                    participant.getPlayer().getName());
+            gameSessionRepository.save(session);
+            return gameParticipantRepository.save(participant);
         }
 
         // 3. Apply roll
+        if (participant.getThrowCount() == 0) {
+            participant.setFirstRoll(roll); // frozen — used to restore on penalty
+        }
         participant.setLastRoll(roll);
         participant.setThrowCount(participant.getThrowCount() + 1);
         return gameParticipantRepository.save(participant);
@@ -384,7 +393,9 @@ public class GameService {
             int penalty = Math.min(session.getCentralStack(), 1);
             session.setCentralStack(session.getCentralStack() - penalty);
             p.setPenaltyChips(p.getPenaltyChips() + penalty);
-            log.warn("Blind-Zwang violated by {}. 1 penalty chip applied.", p.getPlayer().getName());
+            p.setLastRoll(p.getFirstRoll()); // first roll counts — freeze (SCHOCKEN_RULES.md §2a)
+            log.warn("Blind-Zwang violated by {}. 1 penalty chip applied. lastRoll frozen to first roll.",
+                    p.getPlayer().getName());
             gameSessionRepository.save(session);
         }
 

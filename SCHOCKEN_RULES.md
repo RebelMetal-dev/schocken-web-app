@@ -76,9 +76,9 @@ Würfelt der Beginner **offen** (Becher aufgedeckt):
 | Aufgedeckt obwohl Blind-Zwang gilt | 1 Strafchip sofort | Erster Wurf zählt |
 | Aufgedeckt obwohl Beginner blind gespielt hat | 1 Strafchip sofort | Erster Wurf zählt |
 
-> **Entwicklerhinweis:** Bei einem Strafauslöser muss `lastRoll` auf den **ersten** Wurf eingefroren
-> werden — weitere `applyRoll()`-Aufrufe dürfen `lastRoll` dann nicht mehr überschreiben.
-> MVP-TODO: aktuell überschreibt `applyRoll()` `lastRoll` bei jedem Wurf.
+> **Entwicklerhinweis:** Bei einem Strafauslöser wird `lastRoll` auf den **ersten** Wurf eingefroren.
+> `GameParticipant.firstRoll` speichert den initialen Wurf — `applyRoll()` restauriert `lastRoll`
+> auf `firstRoll` wenn Over-Limit oder Blind-Zwang-Verletzung ausgelöst wird.
 
 ### 2b. Sonderregel: Hand-Wandlung (Sechsen-Wandlung)
 * **Nur 1en sammeln:** Es dürfen ausschließlich Einsen (oder gewandelte Sechsen) rausgelegt werden.
@@ -111,23 +111,38 @@ Würfelt der Beginner **offen** (Becher aufgedeckt):
 
 ## 3. Wertigkeit der Würfe (Rangfolge — höchster zuerst)
 
-| Rang | Bezeichnung | Beispiel | Penalty-Chips |
-| :--- | :--- | :--- | :--- |
-| 1 (höchste) | Schock-Aus | 1, 1, 1 | 13 (gesamter Stack) |
-| 2 | Schock x | x, 1, 1 (x = Augenzahl) | x Chips |
-| 3 | Triplet (General) | x, x, x | 3 Chips |
-| 4 | Strasse | x, x-1, x-2 | 2 Chips |
-| 5 (niedrigste) | Hausnummer | alle anderen | 1 Chip |
+| Rang | Bezeichnung | Beispiel | Höherer Wert gewinnt? | Penalty-Chips |
+| :--- | :--- | :--- | :--- | :--- |
+| 1 (höchste) | Schock-Aus | 1, 1, 1 | — (einziger Wert) | 13 (gesamter Stack) |
+| 2 | Schock x | x, 1, 1 (x = Augenzahl, 2–6) | Ja — Schock 6 schlägt Schock 2 | x Chips |
+| 3 | Triplet (General) | x, x, x | Ja — Triplet 6 schlägt Triplet 2 | 3 Chips |
+| 4 | Strasse | x, x-1, x-2 | Ja — 4,5,6 schlägt 1,2,3 | 2 Chips |
+| 5 (niedrigste) | Hausnummer | alle anderen | Ja — 6,5,2 schlägt 2,2,1 | 1 Chip |
+
+> **Niedrigster möglicher Wert:** Hausnummer 2,2,1 — ein Wurf, der weder Einsen sammelt noch eine Straße oder Triplet bildet, und dabei möglichst niedrig ist.
 
 ---
 
-## 4. Die "Schock-Dynamik" (Tie-Breaking & Wertung)
+## 4. Tie-Breaking & Die Goldene Mitte
 
-Bei gleicher Augenzahl (z.B. zwei Spieler haben einen Schock 4) entscheidet:
+Haben zwei oder mehr Spieler **denselben Wurfwert** (z.B. beide Schock 4, beide Triplet 3), entscheiden folgende Regeln **der Reihe nach**:
 
-1. **Status-Regel:** **Hand-Wurf schlägt kombinierten Wurf.** Wer seinen Wurf in einem Zug (ohne Rauslegen) erreicht hat, gewinnt gegenüber demjenigen, der gesammelt hat.
-2. **"Mit ist shit" (Reihenfolge):** Bei gleichem Status gewinnt der Spieler, der **früher** in der Runde gewürfelt hat. Der Nachzügler verliert.
-3. **Die Goldene Mitte:** Ein Hand-Wurf kann einen Spieler zum Gewinner mutieren lassen, wodurch der ursprüngliche Gewinner (zusammen) in die "Goldene Mitte" rutscht und gerettet ist. Der schlechtere Wurf bleibt Verlierer.
+### 4a. Status-Regel: Hand schlägt kombiniert
+* **Hand-Wurf** = alle Würfel in einem einzigen Zug geworfen (kein Rauslegen).
+* **Kombinierter Wurf** = Ergebnis durch mehrere Würfe + Rauslegen zusammengestellt.
+* Ein Hand-Wurf **schlägt** einen kombinierten Wurf desselben Werts.
+* Gilt für **Gewinner- und Verliererseite** gleichermaßen.
+
+### 4b. Reihenfolge-Regel ("Mit ist shit")
+Bei gleichem Status (beide Hand oder beide kombiniert) gilt:
+* **Gewinnerseite:** Der Spieler, der **früher** gewürfelt hat, gewinnt (FIFO — First In, First Out).
+* **Verliererseite:** Der Spieler, der **später** gewürfelt hat, verliert (LIFO — Last In, First Out).
+* Sprich: Wer als Nachzügler denselben schlechten Wert erzielt, hat Pech gehabt.
+
+### 4c. Die Goldene Mitte
+* Ein späterer Hand-Wurf kann den bisherigen Gewinner in die **Goldene Mitte** verschieben — er ist damit **gerettet** (weder Gewinner noch Verlierer).
+* Der neue Hand-Wurf-Spieler wird zum **Gewinner**.
+* **Wichtig:** Die Goldene Mitte betrifft ausschließlich die Gewinner-Seite. Der **Verlierer** ist immer der Spieler mit dem **objektiv niedrigsten Wurfwert** — unabhängig von Hand-Status oder Reihenfolge.
 
 ---
 
@@ -145,8 +160,12 @@ Bei gleicher Augenzahl (z.B. zwei Spieler haben einen Schock 4) entscheidet:
 * Zwei Hälften-Verlierer spielen gegeneinander, bis einer 13 Chips hat.
 
 ### 6b. Versehentliches Einwürfeln (Gefangen-Regel)
-* Wer sich unachtsam ins Finale einwürfelt (Interaktion ausführt) und einen Chip kassiert, ist **"gefangen"**.
-* Er muss so lange mitspielen, bis er seine Chips wieder los ist oder der CentralStack leer ist.
+* Läuft das Finale zwischen den zwei Hälften-Verlierern, und ein **dritter Spieler** drückt unachtsam auf Würfeln → er ist mit diesem Wurf **im Finale dabei**.
+* Er erhält **keinen Strafdeckel** für das Einwürfeln — das Finale mitspielen ist Strafe genug.
+* **Nach dem ersten Wurf entscheidet sich sein Schicksal:**
+  * Er verliert **keinen Chip** aus dem Stock → er ist sofort wieder **draußen**. Glück gehabt.
+  * Er verliert und erhält einen **Chip aus dem Stock** → er ist **gefangen**: Er muss so lange mitspielen, bis der Stock leer ist und er selbst keine Chips mehr hat.
+* Ein gefangener Spieler kann das gesamte Finale verlieren und damit die **Bierrunde** zahlen — obwohl er ursprünglich gar nicht Teil des Finals war. Unachtsamkeit hat ihren Preis.
 
 ### 6c. Die Bierrunde (Tradition)
 * Der finale Gesamtverlierer übernimmt die **Bierrunde** für alle Teilnehmer der Partie.
