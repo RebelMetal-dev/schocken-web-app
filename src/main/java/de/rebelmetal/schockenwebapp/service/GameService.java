@@ -254,8 +254,11 @@ public class GameService {
     // 4c — Phase transition logic after each chip distribution.
     // Two if-blocks (not else-if): a ShockOut on a full stack could trigger both
     // transitions in a single call — the centralStack reset to 13 prevents double-firing.
+    // Half ends when a player accumulates 13 chips (SCHOCKEN_RULES.md §5).
+    // centralStack == 0 is NOT the trigger — chips redistribute from winner to loser
+    // after the stack empties until one player reaches 13.
     private void handlePhaseTransitions(GameSession session, GameParticipant loser) {
-        if (session.getPhase() == GamePhase.FIRST_HALF && session.getCentralStack() == 0) {
+        if (session.getPhase() == GamePhase.FIRST_HALF && loser.getPenaltyChips() >= 13) {
             loser.setLostFirstHalf(true);
             log.info("First half over. {} lost.", loser.getPlayer().getName());
             session.getParticipants().forEach(p -> p.setPenaltyChips(0));
@@ -263,7 +266,7 @@ public class GameService {
             session.setPhase(GamePhase.SECOND_HALF);
         }
 
-        if (session.getPhase() == GamePhase.SECOND_HALF && session.getCentralStack() == 0) {
+        if (session.getPhase() == GamePhase.SECOND_HALF && loser.getPenaltyChips() >= 13) {
             loser.setLostSecondHalf(true);
             log.info("Second half over. {} lost.", loser.getPlayer().getName());
             if (loser.hasLostMatch()) {

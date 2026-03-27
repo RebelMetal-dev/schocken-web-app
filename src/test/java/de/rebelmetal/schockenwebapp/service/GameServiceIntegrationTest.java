@@ -116,9 +116,11 @@ class GameServiceIntegrationTest {
 
     @Test
     void evaluateRound_withShockOut_givesRemainingChipsToLoserAndTransitionsPhase() {
-        // Given: Only 5 chips left in the central stack during the first half
+        // Given: Only 5 chips left in the central stack during the first half.
+        // Player 2 already holds 8 chips from previous rounds → 8 + 5 = 13 triggers half-end.
         testSession.setCentralStack(5);
         testSession.setPhase(GamePhase.FIRST_HALF);
+        player2.setPenaltyChips(8);
 
         // Player 1: Shock Out → Winner (highest possible roll)
         player1.setLastRoll(new DiceRoll(1, 1, 1, false, 1));
