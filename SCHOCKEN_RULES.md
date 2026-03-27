@@ -95,7 +95,13 @@ Würfelt der Beginner **offen** (Becher aufgedeckt):
 ### 2c. Reihenfolge & Showdown
 * Jede neue Runde beginnt der **Verlierer der Vorrunde**. Die Reihenfolge verschiebt sich dadurch ständig.
 * **Sitzordnung:** Immer **links vom Beginner** (Uhrzeigersinn).
-* **Sequentieller Showdown:** Nach dem letzten Spieler decken alle **links vom Beginner der Reihe nach** auf — außer der Beginner hat offen gespielt, dann ist die Reihenfolge frei.
+
+#### Showdown-Regeln
+| Situation | Aufdeckungs-Reihenfolge |
+| :--- | :--- |
+| Beginner würfelt **1× und deckt sofort auf** (erster Wurf, offen) | Alle Nachfolger dürfen **frei** aufdecken wann sie wollen |
+| Beginner würfelt **mehrmals** (2× oder 3×) | Sequentiell: **links vom Beginner** der Reihe nach |
+| Beginner spielt **blind** (Becher bleibt verdeckt) | Beginner deckt als **Erster** auf, dann sequentiell links |
 
 > **Entwicklerhinweis — Gleichzeitigkeit im Showdown:** In der Web-App klickt jeder einzeln auf
 > "Aufdecken". Die Würfel werden für alle erst sichtbar, wenn **alle** `cupRevealed = true` gesetzt
