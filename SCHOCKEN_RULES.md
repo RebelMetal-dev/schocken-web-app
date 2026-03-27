@@ -6,12 +6,47 @@ Diese Datei enthält das verbindliche Regelwerk inklusive aller taktischen Feinh
 
 ## 1. Anfangsrunde (Setup Phase)
 
-* **Der Wurf:** Alle Mitspieler würfeln **genau einmal** mit allen 3 Würfeln verdeckt im Becher.
-* **Simultanes Aufdecken:** Alle heben **gleichzeitig** auf — kein Spieler darf vorher schauen.
-* **Bestimmung der Deckel:** Der höchste Wurf am Tisch bestimmt die Anzahl der Chips, die aus dem **CentralStack** (13 Stück) verteilt werden.
-* **Stechen (Tie-Break in der Anfangsrunde):** * Wenn 2+ Spieler denselben **schlechtesten** Wurf haben → diese stechen, bis ein eindeutiger Verlierer feststeht.
-* **Beginner:** Der finale Verlierer der Anfangsrunde ist der **Vorleger** der ersten Hauptrunde.
-* **Sitzordnung:** Ergibt sich automatisch; der Spieler links vom Beginner ist der Nächste (Uhrzeigersinn).
+### Zweck
+Die Anfangsrunde bestimmt:
+1. Wer als **Beginner** (Vorleger) die erste Hauptrunde eröffnet
+2. Wie viele **Chips** (Deckel/Pappen) dieser Spieler zu Beginn aus dem **Stock** erhält
+
+### Ablauf
+* Alle würfeln **genau einmal** mit allen 3 Würfeln verdeckt im Becher.
+* Alle decken **gleichzeitig** auf — kein Spieler darf vorher schauen.
+* Der Spieler mit dem **höchsten** Wurf gewinnt.
+* Der Spieler mit dem **schlechtesten** Wurf verliert → wird Beginner der ersten Hauptrunde.
+* Der Verlierer erhält aus dem Stock so viele Chips, wie der **Penalty-Wert des Gewinnerwurfs** beträgt.
+
+| Gewinnerwurf | Beispiel | Chips für den Verlierer |
+| :--- | :--- | :--- |
+| Schock-Aus | 1,1,1 | 13 (gesamter Stock) |
+| Schock x | 1,1,6 | 6 |
+| Triplet | 3,3,3 | 3 |
+| Straße | 4,5,6 | 2 |
+| Hausnummer | 2,4,6 | 1 |
+
+> **Entwicklerhinweis — Gleichzeitigkeit:** Im echten Spiel decken alle gleichzeitig auf.
+> In der Web-App passiert das technisch nacheinander (jeder klickt "Aufdecken").
+> Die Würfel aller Spieler werden erst dann für alle sichtbar, wenn der **letzte Spieler**
+> auf "Aufdecken" geklickt hat — so bleibt die Spannung erhalten.
+> Implementierung: `cupRevealed`-Flags sammeln → erst wenn alle `true` sind, sendet der
+> Server einen Broadcast mit allen aufgedeckten Würfeln gleichzeitig.
+
+### Stechen (Tie-Break)
+* Haben 2+ Spieler **denselben schlechtesten** Wurf → nur diese stechen erneut.
+* Alle anderen Spieler schauen zu.
+* Wiederholt sich mit denselben Regeln bis ein **eindeutiger** Verlierer feststeht.
+* Dieselben Rang-Regeln gelten wie in der Hauptrunde.
+
+### Sonderfall: Sofortiger Halbzeit-Verlust
+* Erhält der Verlierer alle 13 Chips (Gewinner würfelt Schock-Aus) → **erste Hälfte sofort verloren**.
+* Er erhält einen **roten Markierungsdeckel** als Kennzeichnung.
+* Derselbe Spieler beginnt die zweite Hälfte als Vorleger — mit den üblichen Regeln (1–3 Würfe, Blind-Option etc.).
+
+### Einschränkungen der Anfangsrunde
+* **Kein Würfel-Limit, keine Hand-Wandlung** — jeder würfelt genau einmal mit allen 3 Würfeln.
+* Die Anfangsrunde ist technisch eine Hauptrunde mit festem Limit = 1 und deaktivierter Wandlung.
 
 ---
 
