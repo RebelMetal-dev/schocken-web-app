@@ -111,12 +111,15 @@ public class GameService {
         int loserIndex = current.indexOf(loser);
         if (loserIndex == -1) return;
 
-        List<GameParticipant> newOrder = new ArrayList<>();
         int size = current.size();
+        List<GameParticipant> newOrder = new ArrayList<>(size);
         for (int i = 0; i < size; i++) {
             newOrder.add(current.get((loserIndex + i) % size));
         }
-        session.setParticipants(newOrder);
+        // Clear and re-add into the SAME collection instance — replacing the reference
+        // would break Hibernate's orphanRemoval tracking on GameSession.participants.
+        session.getParticipants().clear();
+        session.getParticipants().addAll(newOrder);
     }
 
     @Transactional
@@ -310,12 +313,17 @@ public class GameService {
     // Enforces turn order and roll limit before any dice state is written.
     // Called exclusively from performVirtualRoll() and performManualRoll() — never from outside.
     private GameParticipant applyRoll(GameSession session, GameParticipant participant, DiceRoll roll) {
-        // 1. Turn check: only the active player may roll
-        GameParticipant active = session.getParticipants().get(session.getActiveParticipantIndex());
-        if (!active.getId().equals(participant.getId())) {
-            throw new IllegalStateException(
-                    "It is not " + participant.getPlayer().getName() + "'s turn. " +
-                    "Active player: " + active.getPlayer().getName());
+        // 1. Turn check: only the active player may roll.
+        // Skipped during setup phases (§1) — all players roll freely with no fixed order.
+        boolean isSetupPhase = session.getPhase() == GamePhase.WAITING_FOR_PLAYERS
+                || session.getPhase() == GamePhase.SETTING_UP_ORDER;
+        if (!isSetupPhase) {
+            GameParticipant active = session.getParticipants().get(session.getActiveParticipantIndex());
+            if (!active.getId().equals(participant.getId())) {
+                throw new IllegalStateException(
+                        "It is not " + participant.getPlayer().getName() + "'s turn. " +
+                        "Active player: " + active.getPlayer().getName());
+            }
         }
 
         // 2. Limit guard (SCHOCKEN_RULES.md §2a).
