@@ -82,6 +82,39 @@ class GameServiceIntegrationTest {
     }
 
     @Test
+    void evaluateSetupAndDetermineOrder_distributesChipsFromStockToLoser() {
+        // Given: player1 worst (HOUSE_NUMBER), player2 best (TRIPLET 4,4,4 → penalty 3), player3 middle
+        player1.setLastRoll(new DiceRoll(6, 5, 3, false, 1)); // HOUSE_NUMBER — loser
+        player2.setLastRoll(new DiceRoll(4, 4, 4, false, 1)); // TRIPLET      — winner (penalty = 3)
+        player3.setLastRoll(new DiceRoll(3, 4, 5, false, 1)); // STRAIGHT     — middle
+        gameSessionRepository.save(testSession);
+
+        // When
+        gameService.evaluateSetupAndDetermineOrder(
+                testSession.getId(),
+                List.of(player1.getId(), player2.getId(), player3.getId())
+        );
+
+        // Then
+        GameSession s = gameSessionRepository.findById(testSession.getId()).orElseThrow();
+        assertThat(s.getPhase()).isEqualTo(GamePhase.FIRST_HALF);
+
+        // Loser (player1) receives 3 chips from stock (TRIPLET penalty = 3)
+        GameParticipant loser = s.getParticipants().stream()
+                .filter(p -> p.getId().equals(player1.getId())).findFirst().orElseThrow();
+        assertThat(loser.getPenaltyChips()).isEqualTo(3);
+
+        // Central stack reduced by 3 (13 - 3 = 10)
+        assertThat(s.getCentralStack()).isEqualTo(10);
+
+        // All rolls cleared after setup (round 1 starts fresh)
+        assertThat(s.getParticipants()).allMatch(p -> p.getLastRoll() == null);
+
+        // Loser is now first in participant order (Beginner of round 1)
+        assertThat(s.getParticipants().get(0).getId()).isEqualTo(player1.getId());
+    }
+
+    @Test
     void evaluateRound_withShockOut_givesRemainingChipsToLoserAndTransitionsPhase() {
         // Given: Only 5 chips left in the central stack during the first half
         testSession.setCentralStack(5);

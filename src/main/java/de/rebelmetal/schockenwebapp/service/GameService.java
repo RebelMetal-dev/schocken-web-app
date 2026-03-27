@@ -80,16 +80,26 @@ public class GameService {
         List<GameParticipant> lowestRollers = roundEvaluator.findAllLowestRollers(setupRollers);
 
         if (lowestRollers.size() == 1) {
-            // Only one loser -> Setup finished
-            GameParticipant loser = lowestRollers.get(0);
+            // Clear loser — chips from stock equal to penalty value of winner's roll (§1)
+            GameParticipant loser   = lowestRollers.get(0);
+            GameParticipant winner  = roundEvaluator.findWinner(setupRollers);
+            int penalty = Math.min(
+                    roundEvaluator.calculatePenalty(winner.getLastRoll()),
+                    session.getCentralStack());
+            session.setCentralStack(session.getCentralStack() - penalty);
+            loser.setPenaltyChips(loser.getPenaltyChips() + penalty);
+            gameParticipantRepository.save(loser);
+            log.info("Setup complete. Loser: {} receives {} chip(s). Winner: {}.",
+                    loser.getPlayer().getName(), penalty, winner.getPlayer().getName());
+
             reorderParticipantsStartingWith(session, loser);
+            resetRoundState(session, setupRollers); // clear rolls + rollLimit for round 1
             session.setPhase(GamePhase.FIRST_HALF);
-            log.info("Setup complete. Loser: {}", loser.getPlayer().getName());
         } else {
-            // Tie-break -> transition to SETTING_UP_ORDER, clear rolls for tied participants
+            // Tie-break -> transition to SETTING_UP_ORDER, reset rolls for tied participants
             session.setPhase(GamePhase.SETTING_UP_ORDER);
             log.info("Setup tie-break needed for {} players.", lowestRollers.size());
-            lowestRollers.forEach(p -> p.setLastRoll(null));
+            lowestRollers.forEach(GameParticipant::resetRoll);
         }
 
         gameSessionRepository.save(session);

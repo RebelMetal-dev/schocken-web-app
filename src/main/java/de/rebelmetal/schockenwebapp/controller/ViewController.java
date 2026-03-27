@@ -89,6 +89,28 @@ public class ViewController {
     }
 
     /**
+     * Evaluates the setup rolls and determines the starting order.
+     * Transitions phase from WAITING_FOR_PLAYERS (or SETTING_UP_ORDER) to FIRST_HALF.
+     * All participants must have rolled before calling this.
+     */
+    @PostMapping("/game/start")
+    public String startGame(Model model,
+                            HttpSession httpSession,
+                            HttpServletResponse response) {
+        UUID sessionId = (UUID) httpSession.getAttribute(SESSION_ATTR_GAME_ID);
+        GameSession session = gameSessionRepository.findById(sessionId).orElseThrow();
+
+        List<UUID> participantIds = session.getParticipants().stream()
+                .map(GameParticipant::getId).toList();
+
+        gameService.evaluateSetupAndDetermineOrder(sessionId, participantIds);
+
+        populateModel(model, gameSessionRepository.findById(sessionId).orElseThrow());
+        response.addHeader("HX-Trigger", EVENT_DICE_ROLLED);
+        return FRAGMENT_TAVERN_TABLE;
+    }
+
+    /**
      * Evaluates the current round and distributes chips.
      * Participant IDs are resolved server-side from the active session —
      * the client does not need to track or submit them.
@@ -185,12 +207,18 @@ public class ViewController {
                 toViewModels(session.getParticipants(), session.getActiveParticipantIndex()));
         // canEvaluate: semantic boolean — template decides button visibility, not CSS strings.
         model.addAttribute("canEvaluate", isEvaluatablePhase(session.getPhase()));
+        model.addAttribute("canStart", isSetupPhase(session.getPhase()));
     }
 
     private boolean isEvaluatablePhase(GamePhase phase) {
         return phase == GamePhase.FIRST_HALF
                 || phase == GamePhase.SECOND_HALF
                 || phase == GamePhase.FINAL_MATCH;
+    }
+
+    private boolean isSetupPhase(GamePhase phase) {
+        return phase == GamePhase.WAITING_FOR_PLAYERS
+                || phase == GamePhase.SETTING_UP_ORDER;
     }
 
     private List<ParticipantViewModel> toViewModels(List<GameParticipant> participants, int activeIndex) {

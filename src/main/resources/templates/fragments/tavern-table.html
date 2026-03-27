@@ -73,19 +73,11 @@
                     </span>
                 </div>
 
-                <!-- Dice result + throw counter -->
-                <div class="mb-2">
-                    <span class="font-monospace fs-5" th:text="${p.diceDisplay}">—</span>
-                    <small class="text-muted ms-2"
-                           th:text="'(' + ${p.throwCount} + ' throw(s))'"></small>
-                </div>
-
-                <!-- Penalty chips -->
-                <div class="mb-2">
-                    <small class="text-muted text-uppercase fw-bold">Penalty</small>
-                    <span th:if="${p.penaltyChips == 0}" class="text-success ms-2 small">—</span>
-                    <span th:if="${p.penaltyChips > 0}" class="text-danger ms-2 fw-bold"
-                          th:text="${p.penaltyChips} + ' ⚫'"></span>
+                <!-- Stats: dice, throws, chips -->
+                <div class="mb-3 font-monospace small text-white">
+                    <div>Dice:   <span th:text="${p.diceDisplay}">—</span></div>
+                    <div>Throws: <span th:text="${p.throwCount} + '/3'">0/3</span></div>
+                    <div>Chips:  <span th:text="${p.penaltyChips}">0</span></div>
                 </div>
 
                 <!--
@@ -147,6 +139,16 @@
         hx-target        → replaces the tavern-table with the updated fragment.
         hx-swap=outerHTML → preserves the fragment id and hx-* attributes on every swap.
     -->
+    <div th:if="${canStart}" class="mt-4 d-flex justify-content-end">
+        <form hx-post="/game/start"
+              hx-target="#tavern-table"
+              hx-swap="outerHTML">
+            <button type="submit" class="btn btn-success">
+                Spiel starten / Auswürfeln
+            </button>
+        </form>
+    </div>
+
     <div th:if="${canEvaluate}" class="mt-4 d-flex justify-content-end">
         <form hx-post="/game/evaluate"
               hx-target="#tavern-table"
