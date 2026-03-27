@@ -53,22 +53,53 @@ Die Anfangsrunde bestimmt:
 ## 2. Hauptrunde — Ablauf & Taktik
 
 ### 2a. Wurf-Limit & Blind-Option
-* **Limit:** Der Beginner entscheidet, wie oft er würfelt: **1×, 2× oder 3×**. Dies ist das Limit für alle Nachfolger.
-* **Taktik des Vorlegers:** Er kann nach dem 1. oder 2. Wurf **aufdecken**, um Druck aufzubauen, oder **blind liegen lassen** (Bluff).
-* **Blind-Zwang:** Wer das Limit voll ausschöpft (z.B. den 3. Wurf macht), **muss** den Becher verdeckt lassen.
-* **Blind stehen lassen (Thrill):** Wer vor dem Limit aufhört, kann den Becher dennoch verdeckt lassen, um Nachfolger im Unklaren zu lassen.
-* **Strafchips:** Wer unaufgefordert zu früh aufdeckt (beim Limit-Wurf) oder einen Becher hebt, der laut Vorleger blind bleiben muss → **1 Strafchip sofort**.
+
+* **Mindestens 1 Wurf:** Der Beginner muss mindestens einmal würfeln. Er entscheidet durch sein Verhalten (wann er aufhört) das Limit: **1×, 2× oder 3×**. Dies gilt verbindlich für alle Nachfolger.
+* **Offen oder blind:** Deckt der Beginner nach seinem letzten Wurf auf → er hat **offen** gespielt. Lässt er den Becher liegen → er hat **blind** gespielt. Beides ist erlaubt.
+* **Blind-Zwang:** Wer das Limit voll ausschöpft (z.B. den 3. Wurf macht), **muss** den Becher verdeckt lassen — Aufdecken löst sofort einen Strafchip aus.
+* **Blind stehen lassen (Thrill):** Wer vor dem Limit aufhört, kann den Becher freiwillig verdeckt lassen (Bluff), um Nachfolger im Unklaren zu lassen.
+* **Nachfolger dürfen weniger würfeln:** Ein Nachfolger darf auch weniger als das Limit würfeln und seinen Becher verdeckt lassen — erhöht den Thrill-Faktor.
+
+#### Blind-Zwang für alle: die wichtigste Gruppenregel
+Würfelt der Beginner **blind** (Becher bleibt verdeckt):
+* **Alle Nachfolger müssen ebenfalls verdeckt bleiben** — kein Spieler darf vor dem Showdown aufdecken.
+* Erst wenn **alle gewürfelt haben**, darf der Beginner als Erster aufdecken.
+* Danach decken alle **links vom Beginner der Reihe nach** auf — um die Spannung zu halten.
+
+Würfelt der Beginner **offen** (Becher aufgedeckt):
+* Nachfolger dürfen frei entscheiden, wann sie aufdecken — solange sie nicht nochmals würfeln.
+
+#### Strafdeckel (Strafchip-Auslöser)
+| Verstoß | Strafe | Wertung |
+| :--- | :--- | :--- |
+| Zu viel gewürfelt (über Limit) | 1 Strafchip sofort | **Erster Wurf** zählt — spätere Würfe ungültig |
+| Aufgedeckt obwohl Blind-Zwang gilt | 1 Strafchip sofort | Erster Wurf zählt |
+| Aufgedeckt obwohl Beginner blind gespielt hat | 1 Strafchip sofort | Erster Wurf zählt |
+
+> **Entwicklerhinweis:** Bei einem Strafauslöser muss `lastRoll` auf den **ersten** Wurf eingefroren
+> werden — weitere `applyRoll()`-Aufrufe dürfen `lastRoll` dann nicht mehr überschreiben.
+> MVP-TODO: aktuell überschreibt `applyRoll()` `lastRoll` bei jedem Wurf.
 
 ### 2b. Sonderregel: Hand-Wandlung (Sechsen-Wandlung)
 * **Nur 1en sammeln:** Es dürfen ausschließlich Einsen (oder gewandelte Sechsen) rausgelegt werden.
 * **Wandlung:** Nur möglich bei einem Wurf **"aus der Hand"** (alle aktuell genutzten Würfel gleichzeitig geworfen).
-  * Zwei Sechsen (6,6) im Handwurf → können zu **einer Eins** umgedreht werden.
-  * Drei Sechsen (6,6,6) im Handwurf → können zu **zwei Einsen** umgedreht werden.
-* **Risiko-Reset:** Ein Spieler kann jederzeit alle bereits rausgelegten Einsen wieder einpacken und alles neu werfen, um den **Hand-Status** zu erzwingen.
+  * Zwei Sechsen (6,6) im Handwurf → eine Sechs wird zur Eins umgedreht und rausgelegt, die andere geht zurück in den Würfelpool. Verbleibende Würfel: **N − 1**.
+  * Drei Sechsen (6,6,6) im Handwurf → zwei Sechsen werden zu Einsen umgedreht und rausgelegt, die dritte geht zurück in den Würfelpool. Verbleibende Würfel: **N − 2**.
+* **Weiterwürfeln ist Pflicht:** Nach jeder Wandlung muss der Spieler mit den verbleibenden Würfeln sofort weiterwürfeln — Stehenbleiben nach der Wandlung ist nicht erlaubt.
+* **Beispiele (Start: 3 Würfel):**
+  * Wurf 6,6,3 → eine 6 wird zur banked 1 → Pool: die andere 6 + die 3 → **2 Würfel weiterwürfeln**
+  * Wurf 6,6,6 → zwei 6en werden zu banked 1,1 → Pool: die dritte 6 → **1 Würfel weiterwürfeln**
+  * Wurf 6,6,6 → Wandlung → 1 Würfel ergibt 1 → Bank: [1,1,1] = **Schock-Aus** (aber Blind-Zwang gilt wenn es der Limit-Wurf war)
+* **Risiko-Reset:** Ein Spieler kann jederzeit alle rausgelegten Einsen wieder einpacken und alles neu werfen, um den **Hand-Status** zu erzwingen.
 
 ### 2c. Reihenfolge & Showdown
 * Jede neue Runde beginnt der **Verlierer der Vorrunde**. Die Reihenfolge verschiebt sich dadurch ständig.
-* **Sequentieller Showdown:** Nach dem letzten Spieler werden alle verdeckten Becher **nacheinander per Interaktion** in Spielreihenfolge aufgedeckt.
+* **Sitzordnung:** Immer **links vom Beginner** (Uhrzeigersinn).
+* **Sequentieller Showdown:** Nach dem letzten Spieler decken alle **links vom Beginner der Reihe nach** auf — außer der Beginner hat offen gespielt, dann ist die Reihenfolge frei.
+
+> **Entwicklerhinweis — Gleichzeitigkeit im Showdown:** In der Web-App klickt jeder einzeln auf
+> "Aufdecken". Die Würfel werden für alle erst sichtbar, wenn **alle** `cupRevealed = true` gesetzt
+> haben — dann ein einziger Broadcast. So bleibt die Spannung des simultanen Aufdeckens erhalten.
 
 ---
 
