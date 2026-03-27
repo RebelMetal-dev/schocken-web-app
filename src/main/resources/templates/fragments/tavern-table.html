@@ -97,7 +97,31 @@
                     </button>
                 </form>
 
-                <div th:if="${!p.canRoll}" class="text-muted small text-center pt-1">
+                <!-- Reveal Cup — active player who has rolled but not yet revealed -->
+                <form th:if="${p.canRevealCup}"
+                      hx-post="/game/reveal-cup"
+                      hx-target="#tavern-table"
+                      hx-swap="outerHTML"
+                      class="mt-1">
+                    <input type="hidden" name="participantId" th:value="${p.id}">
+                    <button type="submit" class="btn btn-outline-info btn-sm w-100">
+                        Reveal Cup
+                    </button>
+                </form>
+
+                <!-- Finish Turn — active player who has rolled at least once -->
+                <form th:if="${p.canFinishTurn}"
+                      hx-post="/game/finish-turn"
+                      hx-target="#tavern-table"
+                      hx-swap="outerHTML"
+                      class="mt-1">
+                    <input type="hidden" name="participantId" th:value="${p.id}">
+                    <button type="submit" class="btn btn-outline-secondary btn-sm w-100">
+                        Finish Turn
+                    </button>
+                </form>
+
+                <div th:if="${!p.canRoll && !p.canFinishTurn}" class="text-muted small text-center pt-1">
                     — roll complete —
                 </div>
 

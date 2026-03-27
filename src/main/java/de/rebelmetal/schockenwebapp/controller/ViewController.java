@@ -19,6 +19,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 
 import java.util.List;
 import java.util.UUID;
+import java.util.stream.IntStream;
 
 /**
  * Serves the Digital Tavern web interface.
@@ -115,6 +116,41 @@ public class ViewController {
     }
 
     /**
+     * Ends the active player's turn and advances the turn pointer.
+     * Sets the roll limit if this is the starter's first finish-turn call.
+     */
+    @PostMapping("/game/finish-turn")
+    public String finishTurn(@RequestParam UUID participantId,
+                             Model model,
+                             HttpSession httpSession,
+                             HttpServletResponse response) {
+        UUID sessionId = (UUID) httpSession.getAttribute(SESSION_ATTR_GAME_ID);
+        gameService.finishTurn(sessionId, participantId);
+
+        populateModel(model, gameSessionRepository.findById(sessionId).orElseThrow());
+        response.addHeader("HX-Trigger", EVENT_DICE_ROLLED);
+        return FRAGMENT_TAVERN_TABLE;
+    }
+
+    /**
+     * Reveals the active player's cup.
+     * If Blind-Zwang applies (player exhausted roll limit), 1 penalty chip is issued
+     * by the service and lastRoll is frozen to firstRoll.
+     */
+    @PostMapping("/game/reveal-cup")
+    public String revealCup(@RequestParam UUID participantId,
+                            Model model,
+                            HttpSession httpSession,
+                            HttpServletResponse response) {
+        UUID sessionId = (UUID) httpSession.getAttribute(SESSION_ATTR_GAME_ID);
+        gameService.revealCup(sessionId, participantId);
+
+        populateModel(model, gameSessionRepository.findById(sessionId).orElseThrow());
+        response.addHeader("HX-Trigger", EVENT_DICE_ROLLED);
+        return FRAGMENT_TAVERN_TABLE;
+    }
+
+    /**
      * Returns the tavern-table fragment on direct GET.
      * Allows the client to refresh the dice area independently of a roll action.
      */
@@ -131,7 +167,8 @@ public class ViewController {
     @GetMapping("/game/sidebar-fragment")
     public String sidebarFragment(Model model, HttpSession httpSession) {
         GameSession session = fetchActiveSession(httpSession);
-        model.addAttribute("participants", toViewModels(session.getParticipants()));
+        model.addAttribute("participants",
+                toViewModels(session.getParticipants(), session.getActiveParticipantIndex()));
         return FRAGMENT_PLAYER_SIDEBAR;
     }
 
@@ -144,7 +181,8 @@ public class ViewController {
 
     private void populateModel(Model model, GameSession session) {
         model.addAttribute("game", session);
-        model.addAttribute("participants", toViewModels(session.getParticipants()));
+        model.addAttribute("participants",
+                toViewModels(session.getParticipants(), session.getActiveParticipantIndex()));
         // canEvaluate: semantic boolean — template decides button visibility, not CSS strings.
         model.addAttribute("canEvaluate", isEvaluatablePhase(session.getPhase()));
     }
@@ -155,7 +193,9 @@ public class ViewController {
                 || phase == GamePhase.FINAL_MATCH;
     }
 
-    private List<ParticipantViewModel> toViewModels(List<GameParticipant> participants) {
-        return participants.stream().map(ParticipantViewModel::from).toList();
+    private List<ParticipantViewModel> toViewModels(List<GameParticipant> participants, int activeIndex) {
+        return IntStream.range(0, participants.size())
+                .mapToObj(i -> ParticipantViewModel.from(participants.get(i), i == activeIndex))
+                .toList();
     }
 }

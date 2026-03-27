@@ -18,6 +18,8 @@ public record ParticipantViewModel(
         int     penaltyChips,
         boolean safe,
         boolean canRoll,        // false when safe or throw limit reached
+        boolean canFinishTurn,  // true when active + has rolled at least once
+        boolean canRevealCup,   // true when active + has rolled + cup not yet revealed
         String  avatarUrl,      // null — reserved for future avatar feature
         String  skinId          // reserved for future theming
 ) {
@@ -26,15 +28,19 @@ public record ParticipantViewModel(
 
     /**
      * Builds a view model from a JPA entity.
+     * isActive must be true for the participant whose turn it currently is —
+     * Finish Turn and Reveal Cup buttons are only shown for the active player.
      * All display-readiness logic is centralised here so templates stay logic-free.
      */
-    public static ParticipantViewModel from(GameParticipant p) {
+    public static ParticipantViewModel from(GameParticipant p, boolean isActive) {
         DiceRoll roll = p.getLastRoll();
         String diceDisplay = (roll != null)
                 ? roll.getDice().get(0) + ", " + roll.getDice().get(1) + ", " + roll.getDice().get(2)
                 : "—";
-        boolean safe    = p.isSafe();
-        boolean canRoll = !safe && p.getThrowCount() < MAX_THROWS;
+        boolean safe          = p.isSafe();
+        boolean canRoll       = !safe && p.getThrowCount() < MAX_THROWS;
+        boolean canFinishTurn = isActive && p.getThrowCount() > 0;
+        boolean canRevealCup  = isActive && p.getThrowCount() > 0 && !p.isCupRevealed();
 
         return new ParticipantViewModel(
                 p.getId(),
@@ -44,6 +50,8 @@ public record ParticipantViewModel(
                 p.getPenaltyChips(),
                 safe,
                 canRoll,
+                canFinishTurn,
+                canRevealCup,
                 null,
                 DEFAULT_SKIN
         );
