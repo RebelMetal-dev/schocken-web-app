@@ -29,7 +29,7 @@
         </div>
         <div class="col-md-4">
             <div class="p-3 border border-secondary rounded bg-dark">
-                <small class="text-muted d-block text-uppercase fw-bold">Central Stack</small>
+                <small class="text-muted d-block text-uppercase fw-bold">Zentraler Stapel</small>
                 <!-- Elvis operator (?:) guards against a null result from the
                      Thymeleaf expression engine before string concatenation. -->
                 <span class="fs-5 fw-bold text-info"
@@ -53,30 +53,30 @@
     <div th:if="${roundResult != null}"
          class="alert mb-4"
          th:classappend="${roundResult.gameOver} ? 'alert-danger' : 'alert-warning'">
-        <strong th:text="${roundResult.gameOver} ? '🏁 Game Over — ' : '💀 Round lost — '"></strong>
-        <span th:text="${roundResult.loserName}">Player</span>
-        <span th:text="' receives ' + ${roundResult.chipsTransferred} + ' chip(s).'"></span>
+        <strong th:text="${roundResult.gameOver} ? '🏁 Spiel vorbei — ' : '💀 Runde verloren — '"></strong>
+        <span th:text="${roundResult.loserName}">Spieler</span>
+        <span th:text="' erhält ' + ${roundResult.chipsTransferred} + ' Chip(s).'"></span>
     </div>
 
     <!-- Per-participant dice cards -->
-    <h5 class="mb-3 text-warning">Active Rolls</h5>
+    <h5 class="mb-3 text-warning">Aktuelle Würfe</h5>
     <div class="row g-3">
         <div class="col-md-6" th:each="p : ${participants}">
             <div class="p-3 bg-dark border border-secondary rounded">
 
                 <!-- Name + status badge: CSS class chosen by template, not ViewModel -->
                 <div class="d-flex justify-content-between align-items-center mb-2">
-                    <span class="fw-bold text-warning" th:text="${p.displayName}">Player</span>
+                    <span class="fw-bold text-warning" th:text="${p.displayName}">Spieler</span>
                     <span class="badge px-3"
                           th:classappend="${p.safe} ? 'bg-success' : 'border border-warning text-warning'"
-                          th:text="${p.safe} ? 'SAFE' : 'ACTIVE'">
+                          th:text="${p.safe} ? 'Sicher' : 'Aktiv'">
                     </span>
                 </div>
 
                 <!-- Stats: dice, throws, chips -->
                 <div class="mb-3 font-monospace small text-white">
-                    <div>Dice:   <span th:text="${p.diceDisplay}">—</span></div>
-                    <div>Throws: <span th:text="${p.throwCount} + '/3'">0/3</span></div>
+                    <div>Würfel: <span th:text="${p.diceDisplay}">—</span></div>
+                    <div>Würfe:  <span th:text="${p.throwCount} + '/3'">0/3</span></div>
                     <div>Chips:  <span th:text="${p.penaltyChips}">0</span></div>
                 </div>
 
@@ -93,7 +93,7 @@
                       hx-swap="outerHTML">
                     <input type="hidden" name="participantId" th:value="${p.id}">
                     <button type="submit" class="btn btn-warning btn-sm w-100">
-                        Roll Dice
+                        Würfeln
                     </button>
                 </form>
 
@@ -105,7 +105,7 @@
                       class="mt-1">
                     <input type="hidden" name="participantId" th:value="${p.id}">
                     <button type="submit" class="btn btn-outline-info btn-sm w-100">
-                        Reveal Cup
+                        Becher lupfen
                     </button>
                 </form>
 
@@ -117,12 +117,12 @@
                       class="mt-1">
                     <input type="hidden" name="participantId" th:value="${p.id}">
                     <button type="submit" class="btn btn-outline-secondary btn-sm w-100">
-                        Finish Turn
+                        Zug beenden
                     </button>
                 </form>
 
                 <div th:if="${!p.canRoll && !p.canFinishTurn}" class="text-muted small text-center pt-1">
-                    — roll complete —
+                    — fertig gewürfelt —
                 </div>
 
             </div>
@@ -154,7 +154,7 @@
               hx-target="#tavern-table"
               hx-swap="outerHTML">
             <button type="submit" class="btn btn-danger">
-                Evaluate Round
+                Runde auswerten
             </button>
         </form>
     </div>
