@@ -77,6 +77,18 @@ public class GameService {
                 .map(id -> session.getParticipants().stream().filter(p -> p.getId().equals(id)).findFirst().orElseThrow())
                 .toList();
 
+        // Null-guard: every roller must have a lastRoll before evaluation can proceed.
+        // Without this guard, findLoser() calls lastRoll.compareTo() on a null reference,
+        // producing a 500 error that leaves the game silently stuck in WAITING_FOR_PLAYERS.
+        List<String> notYetRolled = setupRollers.stream()
+                .filter(p -> p.getLastRoll() == null)
+                .map(p -> p.getPlayer().getName())
+                .collect(Collectors.toList());
+        if (!notYetRolled.isEmpty()) {
+            throw new IllegalStateException(
+                    "Cannot evaluate setup: the following participants have not rolled yet: " + notYetRolled);
+        }
+
         List<GameParticipant> lowestRollers = roundEvaluator.findAllLowestRollers(setupRollers);
 
         if (lowestRollers.size() == 1) {
@@ -134,6 +146,22 @@ public class GameService {
         boolean isHand = (p.getThrowCount() == 0);
         DiceRoll roll = diceService.rollVirtually(isHand, p.getThrowCount() + 1);
         GameParticipant result = applyRoll(session, p, roll);
+
+        // Auto-transition: once every participant in the setup phase has rolled at least once
+        // (lastRoll != null), trigger evaluation immediately without requiring a manual button click.
+        // Note: @Transactional on evaluateSetupAndDetermineOrder() is bypassed via self-invocation —
+        // the call runs inside the current transaction, which is correct: the roll state and the
+        // phase change are committed atomically in a single database roundtrip.
+        boolean isSetupPhase = session.getPhase() == GamePhase.WAITING_FOR_PLAYERS
+                || session.getPhase() == GamePhase.SETTING_UP_ORDER;
+        if (isSetupPhase && session.getParticipants().stream().allMatch(gp -> gp.getLastRoll() != null)) {
+            List<UUID> allIds = session.getParticipants().stream()
+                    .map(GameParticipant::getId)
+                    .collect(Collectors.toList());
+            log.info("All participants have rolled during setup — triggering automatic evaluation.");
+            evaluateSetupAndDetermineOrder(sessionId, allIds);
+        }
+
         eventPublisher.publishEvent(new GameStateChangedEvent(this, sessionId));
         return result;
     }
